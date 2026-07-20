@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Mail, MessageSquare, MapPin, Phone, ArrowRight, Send } from 'lucide-react';
+import { Mail, MessageSquare, MapPin, Phone, ArrowRight, Send, Clock } from 'lucide-react';
 import { Navbar } from '@/components/site/navbar';
 import { Footer } from '@/components/site/footer';
 import { Reveal } from '@/components/site/reveal';
@@ -11,17 +11,18 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { siteConfig } from '@/lib/data/site';
-
-const CHANNELS = [
-  { icon: Mail, title: 'Email', value: siteConfig.email, text: 'We reply within 24 hours.' },
-  { icon: MessageSquare, title: 'Live Chat', value: 'Available 9am–6pm', text: 'Mon–Fri, in your dashboard.' },
-  { icon: Phone, title: 'Phone', value: siteConfig.phone, text: 'For urgent account issues.' },
-  { icon: MapPin, title: 'Office', value: siteConfig.address, text: 'Drop by for a coffee.' },
-];
+import { useCmsContent } from '@/hooks/use-cms';
 
 export default function ContactPage() {
   const [sent, setSent] = useState(false);
+  const { contact } = useCmsContent();
+
+  const CHANNELS = [
+    { icon: Mail, title: 'Email', value: contact.email, text: 'We reply within 24 hours.' },
+    { icon: MessageSquare, title: 'Live Chat', value: contact.hours, text: 'Mon–Fri, in your dashboard.' },
+    { icon: Phone, title: 'Phone', value: contact.phone, text: 'For urgent account issues.' },
+    { icon: MapPin, title: 'Office', value: contact.address, text: 'Drop by for a coffee.' },
+  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -49,7 +50,6 @@ export default function ContactPage() {
 
       <section className="container pb-24">
         <div className="grid lg:grid-cols-[1.2fr_1fr] gap-8">
-          {/* Form */}
           <Reveal>
             <Card className="card-premium p-6 md:p-8">
               {sent ? (
@@ -100,7 +100,6 @@ export default function ContactPage() {
             </Card>
           </Reveal>
 
-          {/* Channels */}
           <div className="space-y-4">
             {CHANNELS.map((c, i) => (
               <Reveal key={c.title} delay={i * 80}>
@@ -118,6 +117,19 @@ export default function ContactPage() {
                 </Card>
               </Reveal>
             ))}
+            <Reveal delay={320}>
+              <Card className="card-premium">
+                <CardContent className="p-5 flex items-center gap-4">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-gradient-soft text-primary">
+                    <Clock className="h-6 w-6" />
+                  </span>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Hours</p>
+                    <p className="font-semibold text-foreground">{contact.hours}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Reveal>
           </div>
         </div>
       </section>

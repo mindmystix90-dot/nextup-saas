@@ -15,9 +15,10 @@ import { HeroIllustration } from '@/components/site/hero-illustration';
 import { CertificateIllustration } from '@/components/site/certificate-illustration';
 import { CommunityIllustration } from '@/components/site/community-illustration';
 import { getIcon } from '@/lib/icons';
+import { useCmsContent } from '@/hooks/use-cms';
 import {
-  hero,
-  stats,
+  hero as fallbackHero,
+  stats as fallbackStats,
   categories,
   journey,
   certificateFeatures,
@@ -35,6 +36,19 @@ const HERO_AVATARS = [
 ];
 
 export default function HomePage() {
+  const { hero: cmsHero, stats: cmsStats } = useCmsContent();
+  const hero = {
+    eyebrow: cmsHero.eyebrow || fallbackHero.eyebrow,
+    title: [cmsHero.titleLine1, cmsHero.titleLine2, cmsHero.titleLine3].filter(Boolean) as string[],
+    subtitle: cmsHero.subtitle || fallbackHero.subtitle,
+    primaryCta: { label: cmsHero.primaryCta || fallbackHero.primaryCta.label, href: fallbackHero.primaryCta.href },
+    secondaryCta: { label: cmsHero.secondaryCta || fallbackHero.secondaryCta.label, href: fallbackHero.secondaryCta.href },
+    socialProof: fallbackHero.socialProof,
+  };
+  const stats = cmsStats.length > 0
+    ? cmsStats.map((s) => ({ value: Number(s.value) || 0, suffix: s.suffix, label: s.label, icon: s.icon }))
+    : fallbackStats;
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />

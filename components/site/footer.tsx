@@ -1,6 +1,9 @@
+'use client';
+
 import Link from 'next/link';
-import { GraduationCap, Twitter, Linkedin, Youtube, Instagram, Mail } from 'lucide-react';
+import { GraduationCap, Twitter, Linkedin, Youtube, Instagram, Mail, Phone, MapPin } from 'lucide-react';
 import { footerSections, siteConfig } from '@/lib/data/site';
+import { useCmsContent } from '@/hooks/use-cms';
 
 const SOCIALS = [
   { icon: Twitter, href: siteConfig.social.twitter, label: 'Twitter' },
@@ -10,6 +13,8 @@ const SOCIALS = [
 ];
 
 export function Footer() {
+  const { footer, company } = useCmsContent();
+
   return (
     <footer className="relative bg-slate-950 text-slate-300 overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-transparent to-transparent pointer-events-none" />
@@ -21,12 +26,22 @@ export function Footer() {
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-gradient">
                 <GraduationCap className="h-5 w-5 text-white" />
               </span>
-              <span className="font-display text-xl font-bold text-white">{siteConfig.name}</span>
+              <span className="font-display text-xl font-bold text-white">{company.name || siteConfig.name}</span>
             </Link>
             <p className="mt-4 text-sm leading-relaxed text-slate-400">
-              Learn valuable skills, earn certificates, join a community, and build a
-              successful career — all in one premium platform.
+              {footer.description}
             </p>
+            <div className="mt-4 space-y-2 text-xs text-slate-400">
+              <a href={`mailto:${footer.email}`} className="flex items-center gap-2 hover:text-white transition-colors">
+                <Mail className="h-3.5 w-3.5" /> {footer.email}
+              </a>
+              <a href={`tel:${footer.phone}`} className="flex items-center gap-2 hover:text-white transition-colors">
+                <Phone className="h-3.5 w-3.5" /> {footer.phone}
+              </a>
+              <p className="flex items-center gap-2">
+                <MapPin className="h-3.5 w-3.5" /> {footer.address}
+              </p>
+            </div>
             <div className="mt-6 flex items-center gap-3">
               {SOCIALS.map(({ icon: Icon, href, label }) => (
                 <a
@@ -62,14 +77,11 @@ export function Footer() {
 
         <div className="mt-14 pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-slate-500">
-            © {new Date().getFullYear()} {siteConfig.name}. All rights reserved.
+            © {new Date().getFullYear()} {company.name || siteConfig.name}. All rights reserved.
           </p>
-          <div className="flex items-center gap-2 text-sm text-slate-400">
-            <Mail className="h-4 w-4" />
-            <a href={`mailto:${siteConfig.email}`} className="hover:text-white transition-colors">
-              {siteConfig.email}
-            </a>
-          </div>
+          {company.gstin && (
+            <p className="text-xs text-slate-600">GSTIN: {company.gstin}</p>
+          )}
         </div>
       </div>
     </footer>

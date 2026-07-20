@@ -38,6 +38,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { useRouter } from 'next/navigation';
 import { ProtectedRoute } from '@/components/auth/protected-route';
+import { MobileBottomNav } from '@/components/dashboard/mobile-bottom-nav';
 
 const NAV = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -224,8 +225,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="p-4 md:p-6 lg:p-8">{children}</main>
+        <main className="p-4 md:p-6 lg:p-8 pb-24 lg:pb-8">{children}</main>
       </div>
+      <MobileBottomNav />
     </div>
     </ProtectedRoute>
   );
