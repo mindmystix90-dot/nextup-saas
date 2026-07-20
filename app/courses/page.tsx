@@ -34,6 +34,7 @@ interface DisplayCourse {
   price: string;
   icon: string;
   gradient: string;
+  image?: string;
 }
 
 export default function CoursesPage() {
@@ -217,16 +218,22 @@ export default function CoursesPage() {
                   return (
                     <Reveal key={c.id} delay={(i % 3) * 80}>
                       <Card className="card-premium card-premium-hover h-full overflow-hidden">
-                        <div className={cn('relative h-32 bg-gradient-to-br p-5 text-white', c.gradient)}>
-                          <div className="absolute inset-0 bg-slate-950/10" />
-                          <div className="relative flex items-center justify-between">
-                            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
-                              <Icon className="h-6 w-6" />
-                            </span>
-                            {status === 'completed' && <Badge className="bg-success text-white border-transparent">Completed</Badge>}
-                            {status === 'enrolled' && <Badge className="bg-white/20 text-white border-transparent">In Progress</Badge>}
-                            {status === 'locked' && <Badge className="bg-slate-950/40 text-white border-transparent">Locked</Badge>}
-                          </div>
+                        <div className="relative h-32">
+                          {c.image ? (
+                            <img src={c.image} alt={c.title} className="absolute inset-0 h-full w-full object-cover" />
+                          ) : (
+                            <div className={cn('absolute inset-0 bg-gradient-to-br p-5 text-white', c.gradient)}>
+                              <div className="absolute inset-0 bg-slate-950/10" />
+                              <div className="relative flex items-center justify-between">
+                                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+                                  <Icon className="h-6 w-6" />
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                          {status === 'completed' && <Badge className="absolute top-3 right-3 bg-success text-white border-transparent">Completed</Badge>}
+                          {status === 'enrolled' && <Badge className="absolute top-3 right-3 bg-white/20 text-white border-transparent backdrop-blur-sm">In Progress</Badge>}
+                          {status === 'locked' && <Badge className="absolute top-3 right-3 bg-slate-950/40 text-white border-transparent">Locked</Badge>}
                         </div>
                         <CardContent className="p-5">
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">

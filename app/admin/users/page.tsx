@@ -1,119 +1,132 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Users as UsersIcon, Search, Plus, Filter, Download, MoreHorizontal, Pencil, Trash2, Ban, KeyRound, ShieldCheck } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Users as UsersIcon, Search, MoreHorizontal, Pencil, Trash2, Ban, KeyRound, ShieldCheck, Loader2, Eye } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { AdminPageHeader, StatusBadge } from '@/components/admin/admin-page-header';
-import { adminUsers } from '@/lib/data/admin';
 import { toast } from 'sonner';
-import type { Role, Membership } from '@/types';
-
-const PAGE_SIZE = 8;
+import { authService } from '@/services/auth.service';
+import type { Role, Membership, FirestoreProfile } from '@/types';
 
 const ROLE_OPTIONS: Role[] = ['superadmin', 'admin', 'instructor', 'student', 'affiliate', 'user'];
 const MEMBERSHIP_OPTIONS: Membership[] = ['starter', 'pro', 'lifetime'];
 
-type AdminUser = (typeof adminUsers)[number];
+function membershipLabel(m: Membership): string {
+  return m.charAt(0).toUpperCase() + m.slice(1);
+}
 
 export default function AdminUsersPage() {
+  const [users, setUsers] = useState<FirestoreProfile[]>([]);
+  const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
-  const [plan, setPlan] = useState('all');
-  const [status, setStatus] = useState('all');
   const [roleFilter, setRoleFilter] = useState('all');
-  const [page, setPage] = useState(1);
-  const [editUser, setEditUser] = useState<AdminUser | null>(null);
-  const [deleteUser, setDeleteUser] = useState<AdminUser | null>(null);
+  const [membershipFilter, setMembershipFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [editUser, setEditUser] = useState<FirestoreProfile | null>(null);
+  const [viewUser, setViewUser] = useState<FirestoreProfile | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<FirestoreProfile | null>(null);
   const [editForm, setEditForm] = useState({ name: '', role: 'student' as Role, membership: 'starter' as Membership });
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const data = await authService.adminListUsers();
+      setUsers(data);
+    } catch {
+      toast.error('Failed to load users');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   const filtered = useMemo(() => {
-    return adminUsers.filter((u) => {
+    return users.filter((u) => {
       const matchQuery =
-        u.name.toLowerCase().includes(query.toLowerCase()) ||
-        u.email.toLowerCase().includes(query.toLowerCase()) ||
-        u.id.toLowerCase().includes(query.toLowerCase());
-      const matchPlan = plan === 'all' || u.plan === plan;
-      const matchStatus = status === 'all' || u.status === status;
+        (u.name || '').toLowerCase().includes(query.toLowerCase()) ||
+        (u.email || '').toLowerCase().includes(query.toLowerCase()) ||
+        (u.uid || '').toLowerCase().includes(query.toLowerCase());
       const matchRole = roleFilter === 'all' || u.role === roleFilter;
-      return matchQuery && matchPlan && matchStatus && matchRole;
+      const matchMembership = membershipFilter === 'all' || u.membership === membershipFilter;
+      const matchStatus = statusFilter === 'all' || (statusFilter === 'suspended' ? u.suspended : !u.suspended);
+      return matchQuery && matchRole && matchMembership && matchStatus;
     });
-  }, [query, plan, status, roleFilter]);
+  }, [users, query, roleFilter, membershipFilter, statusFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const current = Math.min(page, totalPages);
-  const pageItems = filtered.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
-
-  function openEdit(u: AdminUser) {
+  function openEdit(u: FirestoreProfile) {
     setEditUser(u);
-    setEditForm({ name: u.name, role: (u.role as Role) || 'student', membership: (u.plan.toLowerCase() as Membership) || 'starter' });
+    setEditForm({ name: u.name || '', role: u.role || 'student', membership: u.membership || 'starter' });
   }
 
-  function saveEdit() {
+  async function saveEdit() {
     if (!editUser) return;
-    toast.success(`${editUser.name} updated`, { description: `Role: ${editForm.role} · Membership: ${editForm.membership}` });
-    setEditUser(null);
+    setSaving(true);
+    try {
+      await authService.adminUpdateUser(editUser.uid, { name: editForm.name, role: editForm.role, membership: editForm.membership });
+      toast.success(`${editForm.name || editUser.email} updated`);
+      setEditUser(null);
+      await load();
+    } catch {
+      toast.error('Failed to update user');
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function toggleSuspend(u: AdminUser) {
-    const isSuspended = u.status === 'Suspended';
-    toast.success(`${isSuspended ? 'Reactivated' : 'Suspended'} ${u.name}`, {
-      description: isSuspended ? 'User can now sign in.' : 'User cannot sign in until reactivated.',
-    });
+  async function toggleSuspend(u: FirestoreProfile) {
+    const isSuspended = !!u.suspended;
+    try {
+      await authService.adminSuspendUser(u.uid, !isSuspended);
+      toast.success(`${isSuspended ? 'Reactivated' : 'Suspended'} ${u.name || u.email}`);
+      await load();
+    } catch {
+      toast.error('Failed to update user status');
+    }
   }
 
-  function resetPassword(u: AdminUser) {
-    toast.success(`Password reset email sent to ${u.email}`);
+  async function resetPassword(u: FirestoreProfile) {
+    if (!u.email) { toast.error('No email on file'); return; }
+    try {
+      await authService.adminResetPassword(u.email);
+      toast.success(`Password reset email sent to ${u.email}`);
+    } catch {
+      toast.error('Failed to send reset email');
+    }
   }
 
-  function confirmDelete() {
-    if (!deleteUser) return;
-    toast.success(`${deleteUser.name} has been deleted`);
-    setDeleteUser(null);
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setSaving(true);
+    try {
+      await authService.adminDeleteUser(deleteTarget.uid);
+      toast.success(`${deleteTarget.name || deleteTarget.email} deleted from database`);
+      setDeleteTarget(null);
+      await load();
+    } catch {
+      toast.error('Failed to delete user');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function formatDate(iso: string): string {
+    if (!iso) return '—';
+    try { return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return '—'; }
+  }
+
+  function initials(name: string): string {
+    return (name || '?').split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
   }
 
   return (
@@ -122,16 +135,6 @@ export default function AdminUsersPage() {
         icon={UsersIcon}
         title="Users"
         subtitle="Search, filter and manage all platform users."
-        actions={
-          <>
-            <Button variant="outline" size="sm" onClick={() => toast.success('Export started (demo)')}>
-              <Download className="h-4 w-4 mr-1" /> Export
-            </Button>
-            <Button size="sm" className="bg-brand-gradient font-semibold" onClick={() => toast.info('Add user dialog (demo)')}>
-              <Plus className="h-4 w-4 mr-1" /> Add user
-            </Button>
-          </>
-        }
       />
 
       <Card className="card-premium">
@@ -141,132 +144,135 @@ export default function AdminUsersPage() {
             <div className="relative w-full lg:max-w-xs">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search name, email, ID…"
+                placeholder="Search name, email, UID…"
                 className="pl-10"
                 value={query}
-                onChange={(e) => { setQuery(e.target.value); setPage(1); }}
+                onChange={(e) => setQuery(e.target.value)}
               />
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <Select value={plan} onValueChange={(v) => { setPlan(v); setPage(1); }}>
-                <SelectTrigger className="w-32"><SelectValue placeholder="Plan" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All plans</SelectItem>
-                  <SelectItem value="Starter">Starter</SelectItem>
-                  <SelectItem value="Pro">Pro</SelectItem>
-                  <SelectItem value="Lifetime">Lifetime</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={roleFilter} onValueChange={(v) => { setRoleFilter(v); setPage(1); }}>
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
                 <SelectTrigger className="w-36"><SelectValue placeholder="Role" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All roles</SelectItem>
                   {ROLE_OPTIONS.map((r) => <SelectItem key={r} value={r} className="capitalize">{r}</SelectItem>)}
                 </SelectContent>
               </Select>
-              <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
+              <Select value={membershipFilter} onValueChange={setMembershipFilter}>
+                <SelectTrigger className="w-36"><SelectValue placeholder="Plan" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All plans</SelectItem>
+                  {MEMBERSHIP_OPTIONS.map((m) => <SelectItem key={m} value={m} className="capitalize">{membershipLabel(m)}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-36"><SelectValue placeholder="Status" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All status</SelectItem>
-                  <SelectItem value="Active">Active</SelectItem>
-                  <SelectItem value="Trial">Trial</SelectItem>
-                  <SelectItem value="Suspended">Suspended</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="suspended">Suspended</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead className="hidden md:table-cell">ID</TableHead>
-                <TableHead>Plan</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="hidden sm:table-cell text-right">Joined</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {pageItems.map((u) => (
-                <TableRow key={u.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-9 w-9">
-                        <AvatarImage src={u.avatar} alt={u.name} />
-                        <AvatarFallback className="bg-brand-gradient text-white text-xs font-semibold">
-                          {u.name.split(' ').map((n) => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium text-foreground">{u.name}</p>
-                        <p className="text-xs text-muted-foreground">{u.email}</p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell text-xs text-muted-foreground">{u.id}</TableCell>
-                  <TableCell><Badge variant={u.plan === 'Lifetime' ? 'default' : 'secondary'}>{u.plan}</Badge></TableCell>
-                  <TableCell>
-                    <Badge variant={u.role === 'admin' || u.role === 'superadmin' ? 'default' : 'outline'} className="capitalize">{u.role}</Badge>
-                  </TableCell>
-                  <TableCell><StatusBadge status={u.status} /></TableCell>
-                  <TableCell className="hidden sm:table-cell text-right text-muted-foreground">{u.joined}</TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-44">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => openEdit(u)}>
-                          <Pencil className="mr-2 h-4 w-4" /> Edit profile
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toggleSuspend(u)}>
-                          <Ban className="mr-2 h-4 w-4" /> {u.status === 'Suspended' ? 'Reactivate' : 'Suspend'}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => resetPassword(u)}>
-                          <KeyRound className="mr-2 h-4 w-4" /> Reset password
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => setDeleteUser(u)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" /> Delete user
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {pageItems.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                    No users match your filters.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-
-          <div className="flex items-center justify-between mt-4">
-            <p className="text-xs text-muted-foreground">
-              Showing {(current - 1) * PAGE_SIZE + 1}–{Math.min(current * PAGE_SIZE, filtered.length)} of {filtered.length}
-            </p>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" disabled={current === 1} onClick={() => setPage((p) => p - 1)}>Previous</Button>
-              <span className="text-sm text-muted-foreground">Page {current} of {totalPages}</span>
-              <Button variant="outline" size="sm" disabled={current === totalPages} onClick={() => setPage((p) => p + 1)}>Next</Button>
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
-          </div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <UsersIcon className="mx-auto h-10 w-10 mb-3 opacity-40" />
+              <p className="text-sm">No users found. {users.length === 0 ? 'No users have signed up yet.' : 'Try different filters.'}</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead className="hidden md:table-cell">UID</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Membership</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="hidden sm:table-cell text-right">Created</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((u) => (
+                  <TableRow key={u.uid}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-9 w-9">
+                          {u.photoURL && <AvatarImage src={u.photoURL} alt={u.name} />}
+                          <AvatarFallback className="bg-brand-gradient text-white text-xs font-semibold">{initials(u.name)}</AvatarFallback>
+                        </Avatar>
+                        <p className="font-medium text-foreground">{u.name || 'Unnamed'}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{u.email || '—'}</TableCell>
+                    <TableCell className="hidden md:table-cell text-xs text-muted-foreground font-mono">{u.uid.slice(0, 12)}…</TableCell>
+                    <TableCell><Badge variant={u.role === 'admin' || u.role === 'superadmin' ? 'default' : 'outline'} className="capitalize">{u.role || 'user'}</Badge></TableCell>
+                    <TableCell><Badge variant={u.membership === 'lifetime' ? 'default' : 'secondary'} className="capitalize">{membershipLabel(u.membership || 'starter')}</Badge></TableCell>
+                    <TableCell><StatusBadge status={u.suspended ? 'Suspended' : 'Active'} /></TableCell>
+                    <TableCell className="hidden sm:table-cell text-right text-muted-foreground text-sm">{formatDate(u.createdAt)}</TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-44">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => setViewUser(u)}><Eye className="mr-2 h-4 w-4" /> View profile</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openEdit(u)}><Pencil className="mr-2 h-4 w-4" /> Edit profile</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => toggleSuspend(u)}><Ban className="mr-2 h-4 w-4" /> {u.suspended ? 'Reactivate' : 'Suspend'}</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => resetPassword(u)}><KeyRound className="mr-2 h-4 w-4" /> Reset password</DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => setDeleteTarget(u)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete user</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
+
+      {/* View dialog */}
+      <Dialog open={!!viewUser} onOpenChange={(open) => !open && setViewUser(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>User profile</DialogTitle></DialogHeader>
+          {viewUser && (
+            <div className="space-y-3 py-2 text-sm">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-16 w-16">
+                  {viewUser.photoURL && <AvatarImage src={viewUser.photoURL} alt={viewUser.name} />}
+                  <AvatarFallback className="bg-brand-gradient text-white font-semibold">{initials(viewUser.name)}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-semibold text-lg">{viewUser.name || 'Unnamed'}</p>
+                  <p className="text-muted-foreground">{viewUser.email}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <div><p className="text-xs text-muted-foreground">UID</p><p className="font-mono text-xs">{viewUser.uid}</p></div>
+                <div><p className="text-xs text-muted-foreground">Role</p><p className="capitalize">{viewUser.role || 'user'}</p></div>
+                <div><p className="text-xs text-muted-foreground">Membership</p><p className="capitalize">{membershipLabel(viewUser.membership || 'starter')}</p></div>
+                <div><p className="text-xs text-muted-foreground">Status</p><p>{viewUser.suspended ? 'Suspended' : 'Active'}</p></div>
+                <div><p className="text-xs text-muted-foreground">Phone</p><p>{viewUser.phone || '—'}</p></div>
+                <div><p className="text-xs text-muted-foreground">Created</p><p>{formatDate(viewUser.createdAt)}</p></div>
+                <div className="col-span-2"><p className="text-xs text-muted-foreground">Address</p><p>{viewUser.address || '—'}</p></div>
+              </div>
+            </div>
+          )}
+          <DialogFooter><Button variant="outline" onClick={() => setViewUser(null)}>Close</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit dialog */}
       <Dialog open={!!editUser} onOpenChange={(open) => !open && setEditUser(null)}>
@@ -286,18 +292,14 @@ export default function AdminUsersPage() {
                   <Label>Role</Label>
                   <Select value={editForm.role} onValueChange={(v) => setEditForm((f) => ({ ...f, role: v as Role }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {ROLE_OPTIONS.map((r) => <SelectItem key={r} value={r} className="capitalize">{r}</SelectItem>)}
-                    </SelectContent>
+                    <SelectContent>{ROLE_OPTIONS.map((r) => <SelectItem key={r} value={r} className="capitalize">{r}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <Label>Membership</Label>
                   <Select value={editForm.membership} onValueChange={(v) => setEditForm((f) => ({ ...f, membership: v as Membership }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {MEMBERSHIP_OPTIONS.map((m) => <SelectItem key={m} value={m} className="capitalize">{m}</SelectItem>)}
-                    </SelectContent>
+                    <SelectContent>{MEMBERSHIP_OPTIONS.map((m) => <SelectItem key={m} value={m} className="capitalize">{membershipLabel(m)}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
               </div>
@@ -309,24 +311,26 @@ export default function AdminUsersPage() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditUser(null)}>Cancel</Button>
-            <Button onClick={saveEdit} className="bg-brand-gradient font-semibold">Save changes</Button>
+            <Button onClick={saveEdit} disabled={saving} className="bg-brand-gradient font-semibold">
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save changes
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Delete confirmation */}
-      <AlertDialog open={!!deleteUser} onOpenChange={(open) => !open && setDeleteUser(null)}>
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete user?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently remove {deleteUser?.name} ({deleteUser?.email}) from the platform. This action cannot be undone.
+              This will remove {deleteTarget?.name || deleteTarget?.email} ({deleteTarget?.email}) from the Firestore database. The Firebase Auth account will still exist — delete it from the Firebase console if needed. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete permanently
+            <AlertDialogAction onClick={confirmDelete} disabled={saving} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Delete permanently
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

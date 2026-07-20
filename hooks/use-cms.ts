@@ -26,10 +26,17 @@ export function useCmsContent() {
   return {
     content,
     loading,
+    site: content?.site || fallback.site,
     hero: content?.hero || fallback.hero,
+    about: content?.about || fallback.about,
+    features: content?.features || fallback.features,
     stats: content?.stats || fallback.stats,
+    pricing: content?.pricing || fallback.pricing,
+    faq: content?.faq || fallback.faq,
     footer: content?.footer || fallback.footer,
     contact: content?.contact || fallback.contact,
+    social: content?.social || fallback.social,
+    legal: content?.legal || fallback.legal,
     company: content?.company || fallback.company,
   };
 }

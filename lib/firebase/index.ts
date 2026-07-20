@@ -1,6 +1,7 @@
 import { getApp, getApps, initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
+import { getStorage, type FirebaseStorage } from 'firebase/storage';
 import { firebaseConfig, isFirebaseConfigured } from './config';
 
 export const firebaseReady = isFirebaseConfigured;
@@ -10,6 +11,7 @@ export const firebaseApp = app;
 
 let _auth: Auth | null = null;
 let _firestore: Firestore | null = null;
+let _storage: FirebaseStorage | null = null;
 
 export function getFirebaseAuth(): Auth {
   if (!_auth) _auth = getAuth(app);
@@ -19,6 +21,11 @@ export function getFirebaseAuth(): Auth {
 export function getFirestoreDb(): Firestore {
   if (!_firestore) _firestore = getFirestore(app);
   return _firestore;
+}
+
+export function getFirebaseStorage(): FirebaseStorage {
+  if (!_storage) _storage = getStorage(app);
+  return _storage;
 }
 
 export const googleProvider = new GoogleAuthProvider();

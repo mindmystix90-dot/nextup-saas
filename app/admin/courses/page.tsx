@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { BookOpen, Search, Plus, Pencil, Trash2, Filter, Star, Loader2, MoreHorizontal } from 'lucide-react';
+import { BookOpen, Search, Plus, Pencil, Trash2, Filter, Star, Loader2, MoreHorizontal, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,6 +51,7 @@ import { AdminPageHeader, StatusBadge } from '@/components/admin/admin-page-head
 import { getIcon } from '@/lib/icons';
 import { toast } from 'sonner';
 import { fetchCourses, createCourse, updateCourse, deleteCourse, type Course, type CourseInput } from '@/services/courses.service';
+import { uploadCourseImage } from '@/services/storage.service';
 
 const ICON_OPTIONS = ['Megaphone', 'Bot', 'Briefcase', 'PenTool', 'MessageSquare', 'ShoppingBag', 'Laptop', 'UserCircle', 'BookOpen', 'GraduationCap', 'TrendingUp', 'Rocket'];
 const GRADIENT_OPTIONS = [
@@ -77,6 +78,7 @@ const EMPTY_FORM: CourseInput = {
   duration: '',
   status: 'Draft',
   sort_order: 0,
+  image: '',
 };
 
 export default function AdminCoursesPage() {
@@ -90,6 +92,7 @@ export default function AdminCoursesPage() {
   const [deleteTarget, setDeleteTarget] = useState<Course | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [form, setForm] = useState<CourseInput>(EMPTY_FORM);
 
   const load = useCallback(async () => {
@@ -141,8 +144,25 @@ export default function AdminCoursesPage() {
       duration: c.duration,
       status: c.status,
       sort_order: c.sort_order,
+      image: c.image || '',
     });
     setDialogOpen(true);
+  }
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const tempId = editCourse?.id || `temp-${Date.now()}`;
+      const url = await uploadCourseImage(tempId, file);
+      setForm((f) => ({ ...f, image: url }));
+      toast.success('Image uploaded');
+    } catch {
+      toast.error('Failed to upload image');
+    } finally {
+      setUploadingImage(false);
+    }
   }
 
   async function handleSave() {
@@ -404,10 +424,36 @@ export default function AdminCoursesPage() {
                 <Input type="number" value={form.sort_order} onChange={(e) => setForm((f) => ({ ...f, sort_order: Number(e.target.value) }))} />
               </div>
             </div>
+            <div className="space-y-2">
+              <Label>Course image / thumbnail</Label>
+              <div className="flex items-center gap-4">
+                {form.image ? (
+                  <img src={form.image} alt="Course" className="h-16 w-24 rounded-lg object-cover border border-border" />
+                ) : (
+                  <span className="flex h-16 w-24 items-center justify-center rounded-lg bg-secondary text-muted-foreground text-xs">No image</span>
+                )}
+                <label className="cursor-pointer">
+                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-secondary transition-colors">
+                    {uploadingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    Upload image
+                  </span>
+                  <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImage} />
+                </label>
+                {form.image && (
+                  <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setForm((f) => ({ ...f, image: '' }))}>
+                    Remove
+                  </Button>
+                )}
+              </div>
+            </div>
             <div className="flex items-center gap-3 rounded-xl border border-border p-3">
-              <span className={`flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br ${form.gradient} text-white`}>
-                {(() => { const Icon = getIcon(form.icon); return <Icon className="h-5 w-5" />; })()}
-              </span>
+              {form.image ? (
+                <img src={form.image} alt="Preview" className="h-10 w-10 rounded-lg object-cover" />
+              ) : (
+                <span className={`flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br ${form.gradient} text-white`}>
+                  {(() => { const Icon = getIcon(form.icon); return <Icon className="h-5 w-5" />; })()}
+                </span>
+              )}
               <div>
                 <p className="text-sm font-medium">{form.title || 'Course title'}</p>
                 <p className="text-xs text-muted-foreground">{form.instructor || 'Instructor'} · {form.price}</p>

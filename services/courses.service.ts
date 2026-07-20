@@ -27,6 +27,7 @@ export interface Course {
   duration: string;
   status: 'Published' | 'Draft';
   sort_order: number;
+  image?: string;
   createdAt?: string;
   updatedAt?: string;
 }
