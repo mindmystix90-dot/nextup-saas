@@ -128,7 +128,9 @@ export const authService = {
           const session = await buildSession(firebaseUser);
           callback(session);
         } catch {
-          callback(null);
+          // buildSession failed (e.g. transient Firestore error) but the user is
+          // authenticated. Do not clear the session — keep previous state so a
+          // concurrent login() callback that already set the user isn't wiped.
         }
       });
     } catch {
@@ -263,5 +265,51 @@ export const authService = {
     } catch (err) {
       return { ok: false, error: friendlyAuthError((err as { code?: string }).code) };
     }
+  },
+
+  // ----- Admin: user management (Firestore profile-level actions) -----
+
+  async adminListUsers(): Promise<FirestoreProfile[]> {
+    if (!firebaseReady) return [];
+    const { collection, getDocs, query, orderBy, limit } = await import('firebase/firestore');
+    const snap = await getDocs(query(collection(db(), USERS_COLLECTION), orderBy('createdAt', 'desc'), limit(200)));
+    return snap.docs.map((d) => d.data() as FirestoreProfile);
+  },
+
+  async adminUpdateUser(uid: string, updates: Partial<FirestoreProfile>): Promise<AuthResult> {
+    if (!firebaseReady) return { ok: false, error: 'Firebase is not configured.' };
+    try {
+      await updateDoc(doc(db(), USERS_COLLECTION, uid), { ...updates, updatedAt: serverTimestamp() });
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: friendlyAuthError((err as { code?: string }).code) };
+    }
+  },
+
+  async adminSetRole(uid: string, role: Role): Promise<AuthResult> {
+    return this.adminUpdateUser(uid, { role });
+  },
+
+  async adminSetMembership(uid: string, membership: Membership): Promise<AuthResult> {
+    return this.adminUpdateUser(uid, { membership });
+  },
+
+  async adminSuspendUser(uid: string, suspended: boolean): Promise<AuthResult> {
+    return this.adminUpdateUser(uid, { suspended });
+  },
+
+  async adminDeleteUser(uid: string): Promise<AuthResult> {
+    if (!firebaseReady) return { ok: false, error: 'Firebase is not configured.' };
+    try {
+      const { deleteDoc } = await import('firebase/firestore');
+      await deleteDoc(doc(db(), USERS_COLLECTION, uid));
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: friendlyAuthError((err as { code?: string }).code) };
+    }
+  },
+
+  async adminResetPassword(email: string): Promise<AuthResult> {
+    return this.sendPasswordReset(email);
   },
 };

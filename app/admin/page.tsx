@@ -1,6 +1,6 @@
 'use client';
 
-import { Activity, ArrowUpRight, ArrowDownLeft, ShieldCheck } from 'lucide-react';
+import { Activity, ArrowUpRight, ArrowDownLeft, ShieldCheck, Wallet, Users, GraduationCap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -12,7 +12,7 @@ import {
   adminUsers,
   adminRevenueSeries,
   adminPlanDistribution,
-  adminCategoryDistribution,
+  adminRecentPayments,
 } from '@/lib/data/admin';
 import {
   ResponsiveContainer,
@@ -26,11 +26,23 @@ import {
   Pie,
   Cell,
   Legend,
+  BarChart,
+  Bar,
 } from 'recharts';
 
 function formatINR(n: number): string {
   return new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(n);
 }
+
+const weeklyActivity = [
+  { day: 'Mon', users: 420 },
+  { day: 'Tue', users: 510 },
+  { day: 'Wed', users: 480 },
+  { day: 'Thu', users: 620 },
+  { day: 'Fri', users: 740 },
+  { day: 'Sat', users: 530 },
+  { day: 'Sun', users: 410 },
+];
 
 export default function AdminDashboardPage() {
   return (
@@ -51,8 +63,8 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {adminStats.map((s) => {
           const Icon = getIcon(s.icon);
           const isRevenue = s.label.includes('Revenue');
@@ -69,20 +81,20 @@ export default function AdminDashboardPage() {
                     }`}
                   >
                     {s.trend === 'up' ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownLeft className="h-3 w-3" />}
-                    {s.delta}
                   </span>
                 </div>
                 <p className="mt-4 font-display text-2xl font-bold tracking-tight">
                   {isRevenue ? `₹${formatINR(s.value)}` : `${formatINR(s.value)}${s.suffix}`}
                 </p>
                 <p className="text-sm text-muted-foreground">{s.label}</p>
+                <p className="mt-1 text-xs text-muted-foreground/80">{s.delta}</p>
               </CardContent>
             </Card>
           );
         })}
       </div>
 
-      {/* Charts */}
+      {/* Charts row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         <Card className="card-premium lg:col-span-2">
           <CardHeader>
@@ -153,35 +165,42 @@ export default function AdminDashboardPage() {
         </Card>
       </div>
 
-      {/* Activity + Recent users */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-        <Card className="card-premium">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Activity className="h-5 w-5 text-primary" /> Platform activity
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {adminActivity.map((line) => {
-              const Icon = getIcon(line.icon);
-              return (
-                <div key={line.text} className="flex items-start gap-3 rounded-xl border border-border p-3 text-sm">
-                  <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-secondary ${line.color}`}>
-                    <Icon className="h-4 w-4" />
-                  </span>
-                  <div>
-                    <p className="text-foreground">{line.text}</p>
-                    <p className="text-xs text-muted-foreground">{line.time}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
+      {/* Charts row 2 - weekly activity */}
+      <Card className="card-premium">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Activity className="h-5 w-5 text-primary" /> Weekly active users
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={weeklyActivity} margin={{ left: -12, right: 8, top: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                <XAxis dataKey="day" tickLine={false} axisLine={false} fontSize={12} stroke="hsl(var(--muted-foreground))" />
+                <YAxis tickLine={false} axisLine={false} fontSize={12} stroke="hsl(var(--muted-foreground))" />
+                <Tooltip
+                  contentStyle={{
+                    background: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: 12,
+                    fontSize: 12,
+                  }}
+                />
+                <Bar dataKey="users" fill="hsl(var(--chart-2))" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
 
-        <Card className="card-premium lg:col-span-2">
+      {/* Recent users + Recent payments */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        <Card className="card-premium">
           <CardHeader className="flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-lg">Recent signups</CardTitle>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" /> Recent signups
+            </CardTitle>
             <Button asChild variant="outline" size="sm">
               <a href="/admin/users">View all</a>
             </Button>
@@ -198,7 +217,7 @@ export default function AdminDashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {adminUsers.slice(0, 6).map((u) => (
+                  {adminUsers.slice(0, 5).map((u) => (
                     <tr key={u.id} className="border-b border-border last:border-0 hover:bg-secondary/40 transition-colors">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
@@ -239,7 +258,90 @@ export default function AdminDashboardPage() {
             </div>
           </CardContent>
         </Card>
+
+        <Card className="card-premium">
+          <CardHeader className="flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Wallet className="h-5 w-5 text-primary" /> Recent payments
+            </CardTitle>
+            <Button asChild variant="outline" size="sm">
+              <a href="/admin/wallet">View all</a>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
+                    <th className="px-4 py-3 font-semibold">User</th>
+                    <th className="px-4 py-3 font-semibold">Plan</th>
+                    <th className="px-4 py-3 font-semibold">Amount</th>
+                    <th className="px-4 py-3 font-semibold">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {adminRecentPayments.map((p) => (
+                    <tr key={p.id} className="border-b border-border last:border-0 hover:bg-secondary/40 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-9 w-9">
+                            <AvatarImage src={p.avatar} alt={p.user} />
+                            <AvatarFallback className="bg-brand-gradient text-white text-xs font-semibold">
+                              {p.user.split(' ').map((n) => n[0]).join('')}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium text-foreground">{p.user}</p>
+                            <p className="text-xs text-muted-foreground">{p.date}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge variant="secondary">{p.plan}</Badge>
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-success">{p.amount}</td>
+                      <td className="px-4 py-3">
+                        <Badge
+                          variant={p.status === 'Completed' ? 'default' : p.status === 'Pending' ? 'secondary' : 'destructive'}
+                        >
+                          {p.status}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Recent activity */}
+      <Card className="card-premium">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Activity className="h-5 w-5 text-primary" /> Recent activity
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 md:grid-cols-2">
+            {adminActivity.map((line) => {
+              const Icon = getIcon(line.icon);
+              return (
+                <div key={line.text} className="flex items-start gap-3 rounded-xl border border-border p-3 text-sm">
+                  <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-secondary ${line.color}`}>
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  <div>
+                    <p className="text-foreground">{line.text}</p>
+                    <p className="text-xs text-muted-foreground">{line.time}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

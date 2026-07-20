@@ -1,3 +1,5 @@
+import type { Role } from '@/types';
+
 // Demo data for the Admin Panel. All values are static prototypes — no backend.
 
 export const adminStats: {
@@ -9,9 +11,28 @@ export const adminStats: {
   trend: 'up' | 'down';
 }[] = [
   { value: 25042, suffix: '+', label: 'Total Users', icon: 'Users', delta: '+412 this week', trend: 'up' },
+  { value: 412, suffix: '', label: 'New Users', icon: 'UserCircle', delta: '+18% WoW', trend: 'up' },
+  { value: 4800000, suffix: '', label: 'Revenue', icon: 'IndianRupee', delta: '+8.4% MoM', trend: 'up' },
   { value: 20, suffix: '+', label: 'Courses', icon: 'BookOpen', delta: '+2 this month', trend: 'up' },
-  { value: 4800000, suffix: '', label: 'Revenue (INR)', icon: 'Trophy', delta: '+8.4% MoM', trend: 'up' },
-  { value: 95, suffix: '%', label: 'Completion', icon: 'TrendingUp', delta: '-1.2% MoM', trend: 'down' },
+  { value: 1284, suffix: '', label: 'Affiliates', icon: 'Network', delta: '+86 this month', trend: 'up' },
+  { value: 8420, suffix: '', label: 'Active Students', icon: 'GraduationCap', delta: '+5.2% WoW', trend: 'up' },
+];
+
+export const adminRecentPayments: {
+  id: string;
+  user: string;
+  avatar: string;
+  plan: string;
+  amount: string;
+  method: string;
+  status: 'Completed' | 'Pending' | 'Failed';
+  date: string;
+}[] = [
+  { id: 'TX-9001', user: 'Aarav Sharma', avatar: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop', plan: 'Pro', amount: '+₹999', method: 'UPI', status: 'Completed', date: '16 Jul 2026' },
+  { id: 'TX-9002', user: 'Priya Verma', avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop', plan: 'Lifetime', amount: '+₹4,999', method: 'Card', status: 'Completed', date: '15 Jul 2026' },
+  { id: 'TX-9003', user: 'Aditya Singh', avatar: 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop', plan: 'Pro', amount: '+₹999', method: 'UPI', status: 'Pending', date: '14 Jul 2026' },
+  { id: 'TX-9004', user: 'Neha Gupta', avatar: 'https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop', plan: 'Course', amount: '+₹2,999', method: 'UPI', status: 'Completed', date: '13 Jul 2026' },
+  { id: 'TX-9005', user: 'Ishaan Kapoor', avatar: 'https://images.pexels.com/photos/220457/pexels-photo-220457.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop', plan: 'Pro', amount: '+₹999', method: 'Card', status: 'Failed', date: '12 Jul 2026' },
 ];
 
 export const adminActivity: {
@@ -33,23 +54,23 @@ export const adminUsers: {
   email: string;
   plan: 'Starter' | 'Pro' | 'Lifetime';
   status: 'Active' | 'Trial' | 'Suspended';
-  role: 'user' | 'admin';
+  role: Role;
   joined: string;
   avatar: string;
 }[] = [
-  { id: 'U-1001', name: 'Aarav Sharma', email: 'aarav@example.in', plan: 'Pro', status: 'Active', role: 'user', joined: '12 Jul 2026', avatar: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop' },
-  { id: 'U-1002', name: 'Priya Verma', email: 'priya@example.in', plan: 'Lifetime', status: 'Active', role: 'user', joined: '8 Jul 2026', avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop' },
-  { id: 'U-1003', name: 'Aditya Singh', email: 'aditya@example.in', plan: 'Pro', status: 'Active', role: 'user', joined: '4 Jul 2026', avatar: 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop' },
-  { id: 'U-1004', name: 'Neha Gupta', email: 'neha@example.in', plan: 'Starter', status: 'Trial', role: 'user', joined: '2 Jul 2026', avatar: 'https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop' },
-  { id: 'U-1005', name: 'Ishaan Kapoor', email: 'ishaan@example.in', plan: 'Lifetime', status: 'Active', role: 'user', joined: '28 Jun 2026', avatar: 'https://images.pexels.com/photos/220457/pexels-photo-220457.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop' },
-  { id: 'U-1006', name: 'Sneha Reddy', email: 'sneha@example.in', plan: 'Pro', status: 'Active', role: 'user', joined: '24 Jun 2026', avatar: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop' },
-  { id: 'U-1007', name: 'Karan Malhotra', email: 'karan@example.in', plan: 'Pro', status: 'Suspended', role: 'user', joined: '20 Jun 2026', avatar: 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop' },
-  { id: 'U-1008', name: 'Rohan Mehta', email: 'rohan@example.in', plan: 'Lifetime', status: 'Active', role: 'user', joined: '15 Jun 2026', avatar: 'https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop' },
-  { id: 'U-1009', name: 'Ananya Iyer', email: 'ananya@example.in', plan: 'Lifetime', status: 'Active', role: 'user', joined: '10 Jun 2026', avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop' },
-  { id: 'U-1010', name: 'Ishita Banerjee', email: 'ishita@example.in', plan: 'Starter', status: 'Trial', role: 'user', joined: '5 Jun 2026', avatar: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop' },
-  { id: 'U-1011', name: 'Devansh Patel', email: 'devansh@example.in', plan: 'Pro', status: 'Active', role: 'user', joined: '1 Jun 2026', avatar: 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop' },
-  { id: 'U-1012', name: 'Meera Krishnan', email: 'meera@example.in', plan: 'Pro', status: 'Active', role: 'user', joined: '28 May 2026', avatar: 'https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop' },
-  { id: 'U-1013', name: 'NextUp Admin', email: 'admin@nextup.in', plan: 'Lifetime', status: 'Active', role: 'admin', joined: '1 Jan 2026', avatar: 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop' },
+  { id: 'U-1001', name: 'Aarav Sharma', email: 'aarav@example.in', plan: 'Pro', status: 'Active', role: 'student', joined: '12 Jul 2026', avatar: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop' },
+  { id: 'U-1002', name: 'Priya Verma', email: 'priya@example.in', plan: 'Lifetime', status: 'Active', role: 'instructor', joined: '8 Jul 2026', avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop' },
+  { id: 'U-1003', name: 'Aditya Singh', email: 'aditya@example.in', plan: 'Pro', status: 'Active', role: 'affiliate', joined: '4 Jul 2026', avatar: 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop' },
+  { id: 'U-1004', name: 'Neha Gupta', email: 'neha@example.in', plan: 'Starter', status: 'Trial', role: 'student', joined: '2 Jul 2026', avatar: 'https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop' },
+  { id: 'U-1005', name: 'Ishaan Kapoor', email: 'ishaan@example.in', plan: 'Lifetime', status: 'Active', role: 'student', joined: '28 Jun 2026', avatar: 'https://images.pexels.com/photos/220457/pexels-photo-220457.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop' },
+  { id: 'U-1006', name: 'Sneha Reddy', email: 'sneha@example.in', plan: 'Pro', status: 'Active', role: 'instructor', joined: '24 Jun 2026', avatar: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop' },
+  { id: 'U-1007', name: 'Karan Malhotra', email: 'karan@example.in', plan: 'Pro', status: 'Suspended', role: 'student', joined: '20 Jun 2026', avatar: 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop' },
+  { id: 'U-1008', name: 'Rohan Mehta', email: 'rohan@example.in', plan: 'Lifetime', status: 'Active', role: 'instructor', joined: '15 Jun 2026', avatar: 'https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop' },
+  { id: 'U-1009', name: 'Ananya Iyer', email: 'ananya@example.in', plan: 'Lifetime', status: 'Active', role: 'admin', joined: '10 Jun 2026', avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop' },
+  { id: 'U-1010', name: 'Ishita Banerjee', email: 'ishita@example.in', plan: 'Starter', status: 'Trial', role: 'student', joined: '5 Jun 2026', avatar: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop' },
+  { id: 'U-1011', name: 'Devansh Patel', email: 'devansh@example.in', plan: 'Pro', status: 'Active', role: 'affiliate', joined: '1 Jun 2026', avatar: 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop' },
+  { id: 'U-1012', name: 'Meera Krishnan', email: 'meera@example.in', plan: 'Pro', status: 'Active', role: 'student', joined: '28 May 2026', avatar: 'https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop' },
+  { id: 'U-1013', name: 'NextUp Admin', email: 'admin@nextup.in', plan: 'Lifetime', status: 'Active', role: 'superadmin', joined: '1 Jan 2026', avatar: 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&fit=crop' },
 ];
 
 export const adminCourses: {
@@ -313,15 +334,15 @@ export const adminPermissions: {
 
 export const adminNav: { label: string; href: string; icon: string; group: string }[] = [
   { label: 'Dashboard', href: '/admin', icon: 'LayoutDashboard', group: 'Overview' },
-  { label: 'Website Content', href: '/admin/content', icon: 'FileText', group: 'Overview' },
+  { label: 'Analytics', href: '/admin/analytics', icon: 'BarChart3', group: 'Overview' },
   { label: 'Users', href: '/admin/users', icon: 'Users', group: 'Manage' },
   { label: 'Courses', href: '/admin/courses', icon: 'BookOpen', group: 'Manage' },
   { label: 'Certificates', href: '/admin/certificates', icon: 'Award', group: 'Manage' },
   { label: 'Pricing', href: '/admin/pricing', icon: 'CreditCard', group: 'Manage' },
-  { label: 'Testimonials', href: '/admin/testimonials', icon: 'MessageSquare', group: 'Manage' },
   { label: 'Community', href: '/admin/community', icon: 'Users', group: 'Engage' },
-  { label: 'Wallet', href: '/admin/wallet', icon: 'Wallet', group: 'Engage' },
   { label: 'Affiliate', href: '/admin/affiliate', icon: 'Network', group: 'Engage' },
-  { label: 'Analytics', href: '/admin/analytics', icon: 'BarChart3', group: 'Insights' },
+  { label: 'Payments', href: '/admin/wallet', icon: 'Wallet', group: 'Engage' },
+  { label: 'Website CMS', href: '/admin/content', icon: 'FileText', group: 'Insights' },
+  { label: 'Testimonials', href: '/admin/testimonials', icon: 'MessageSquare', group: 'Insights' },
   { label: 'Settings', href: '/admin/settings', icon: 'Settings', group: 'Insights' },
 ];

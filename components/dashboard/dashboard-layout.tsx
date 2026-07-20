@@ -20,11 +20,23 @@ import {
   ChevronDown,
   Settings,
   ShieldCheck,
+  Sun,
+  Moon,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, homeFor } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/hooks/use-auth';
+import { useTheme } from '@/hooks/use-theme';
+import { useRouter } from 'next/navigation';
 import { ProtectedRoute } from '@/components/auth/protected-route';
 
 const NAV = [
@@ -42,15 +54,18 @@ const NAV = [
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const router = useRouter();
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   const displayName = user?.name || 'Guest';
   const initials = displayName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
   const isAdmin = user?.role === 'admin';
+  const home = homeFor(user?.role);
 
   const Sidebar = (
     <div className="flex h-full flex-col">
-      <Link href="/" className="flex items-center gap-2.5 px-5 h-16 shrink-0 border-b border-border">
+      <Link href={home} className="flex items-center gap-2.5 px-5 h-16 shrink-0 border-b border-border">
         <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-gradient">
           <GraduationCap className="h-4 w-4 text-white" />
         </span>
@@ -150,20 +165,61 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="ml-auto flex items-center gap-2 md:gap-3">
+              <button
+                onClick={toggleTheme}
+                className="flex h-10 w-10 items-center justify-center rounded-xl hover:bg-secondary transition-colors"
+                aria-label="Toggle theme"
+              >
+                {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              </button>
               <button className="relative flex h-10 w-10 items-center justify-center rounded-xl hover:bg-secondary transition-colors">
                 <Bell className="h-5 w-5 text-muted-foreground" />
                 <span className="absolute top-2 right-2.5 h-2 w-2 rounded-full bg-destructive" />
               </button>
-              <div className="flex items-center gap-2.5 rounded-xl border border-border bg-card pl-1.5 pr-3 py-1.5">
-                <Avatar>
-                  <AvatarFallback className="bg-brand-gradient text-white text-xs font-semibold">{initials}</AvatarFallback>
-                </Avatar>
-                <div className="hidden sm:block leading-tight">
-                  <p className="text-sm font-semibold">{displayName}</p>
-                  <p className="text-xs text-muted-foreground">{isAdmin ? 'Admin' : 'Pro member'}</p>
-                </div>
-                <ChevronDown className="hidden sm:block h-4 w-4 text-muted-foreground" />
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-2.5 rounded-xl border border-border bg-card pl-1.5 pr-3 py-1.5 hover:bg-secondary transition-colors">
+                    <Avatar>
+                      <AvatarFallback className="bg-brand-gradient text-white text-xs font-semibold">{initials}</AvatarFallback>
+                    </Avatar>
+                    <div className="hidden sm:block leading-tight text-left">
+                      <p className="text-sm font-semibold max-w-[140px] truncate">{displayName}</p>
+                      <p className="text-xs text-muted-foreground">{isAdmin ? 'Admin' : 'Pro member'}</p>
+                    </div>
+                    <ChevronDown className="hidden sm:block h-4 w-4 text-muted-foreground" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col gap-0.5">
+                      <p className="text-sm font-semibold leading-none">{displayName}</p>
+                      <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard/profile"><UserCircle className="mr-2 h-4 w-4" /> My Profile</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard/settings"><Settings className="mr-2 h-4 w-4" /> Settings</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/pricing"><ShieldCheck className="mr-2 h-4 w-4" /> Membership</Link>
+                  </DropdownMenuItem>
+                  {isAdmin && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin"><ShieldCheck className="mr-2 h-4 w-4" /> Admin Panel</Link>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={async () => { await logout(); router.push('/login'); }}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" /> Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </header>

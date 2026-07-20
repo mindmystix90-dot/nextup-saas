@@ -28,7 +28,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = authService.onAuthChange((sessionUser) => {
-      setUser(sessionUser);
+      setUser((prev) => {
+        if (prev && sessionUser && prev.uid === sessionUser.uid) return prev;
+        return sessionUser;
+      });
       setLoading(false);
     });
     return unsubscribe;

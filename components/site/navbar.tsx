@@ -2,16 +2,30 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Menu, X, GraduationCap } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { usePathname, useRouter } from 'next/navigation';
+import { Menu, X, GraduationCap, UserCircle, Settings, LogOut, LayoutDashboard, ShieldCheck } from 'lucide-react';
+import { cn, homeFor } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { navLinks, siteConfig } from '@/lib/data/site';
+import { useAuth } from '@/hooks/use-auth';
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, loading, logout } = useAuth();
+  const home = homeFor(user?.role);
+  const initials = (user?.name || 'U').split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -34,7 +48,7 @@ export function Navbar() {
       )}
     >
       <nav className="container flex h-16 md:h-20 items-center justify-between">
-        <Link href="/" className="flex items-center gap-2.5 group">
+        <Link href={home} className="flex items-center gap-2.5 group">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-gradient shadow-glow transition-transform group-hover:scale-105">
             <GraduationCap className="h-5 w-5 text-white" />
           </span>
@@ -67,12 +81,67 @@ export function Navbar() {
         </div>
 
         <div className="hidden lg:flex items-center gap-2">
-          <Button variant="ghost" asChild className="font-medium">
-            <Link href="/login">Login</Link>
-          </Button>
-          <Button asChild className="bg-brand-gradient shadow-glow font-semibold">
-            <Link href="/register">Get Started</Link>
-          </Button>
+          {loading ? (
+            <div className="h-9 w-20 rounded-lg bg-secondary animate-pulse" />
+          ) : user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-2 rounded-xl border border-border bg-card pl-1.5 pr-3 py-1.5 hover:bg-secondary transition-colors">
+                  <Avatar className="h-7 w-7">
+                    <AvatarFallback className="bg-brand-gradient text-white text-xs font-semibold">{initials}</AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm font-medium max-w-[120px] truncate">{user.name?.split(' ')[0] || 'Account'}</span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col gap-0.5">
+                    <p className="text-sm font-semibold leading-none">{user.name || 'Member'}</p>
+                    <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href={user.role === 'admin' ? '/admin' : '/dashboard/profile'}>
+                    <UserCircle className="mr-2 h-4 w-4" /> My Profile
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href={user.role === 'admin' ? '/admin/settings' : '/dashboard/settings'}>
+                    <Settings className="mr-2 h-4 w-4" /> Settings
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/pricing">
+                    <ShieldCheck className="mr-2 h-4 w-4" /> Membership
+                  </Link>
+                </DropdownMenuItem>
+                {user.role !== 'admin' && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard">
+                      <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={async () => { await logout(); router.push('/login'); }}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <LogOut className="mr-2 h-4 w-4" /> Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <>
+              <Button variant="ghost" asChild className="font-medium">
+                <Link href="/login">Login</Link>
+              </Button>
+              <Button asChild className="bg-brand-gradient shadow-glow font-semibold">
+                <Link href="/register">Get Started</Link>
+              </Button>
+            </>
+          )}
         </div>
 
         <button
@@ -102,12 +171,25 @@ export function Navbar() {
               </Link>
             ))}
             <div className="flex flex-col gap-2 mt-2 pt-3 border-t border-border">
-              <Button variant="outline" asChild className="w-full">
-                <Link href="/login">Login</Link>
-              </Button>
-              <Button asChild className="w-full bg-brand-gradient">
-                <Link href="/register">Get Started</Link>
-              </Button>
+              {user ? (
+                <>
+                  <Button asChild className="w-full bg-brand-gradient font-semibold">
+                    <Link href={home}>{user.role === 'admin' ? 'Admin Panel' : 'Dashboard'}</Link>
+                  </Button>
+                  <Button variant="outline" className="w-full" onClick={async () => { await logout(); router.push('/login'); }}>
+                    <LogOut className="mr-2 h-4 w-4" /> Logout
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="outline" asChild className="w-full">
+                    <Link href="/login">Login</Link>
+                  </Button>
+                  <Button asChild className="w-full bg-brand-gradient">
+                    <Link href="/register">Get Started</Link>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>

@@ -1,4 +1,4 @@
-export type Role = 'user' | 'admin';
+export type Role = 'superadmin' | 'admin' | 'instructor' | 'student' | 'affiliate' | 'user';
 export type Membership = 'starter' | 'pro' | 'lifetime';
 
 export interface BaseUser {
@@ -30,6 +30,7 @@ export interface FirestoreProfile {
   role: Role;
   membership: Membership;
   address?: string;
+  suspended?: boolean;
   createdAt: string;
   updatedAt: string;
 }
