@@ -9,9 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { AdminPageHeader, StatusBadge } from '@/components/admin/admin-page-header';
-import { adminWebsiteContent } from '@/lib/data/admin';
 import { toast } from 'sonner';
-import { fetchCmsContent, updateCmsSection, type CmsContent, type CmsSection } from '@/lib/supabase/cms';
+import { fetchCmsContent, updateCmsSection, defaultCmsContent, type CmsContent, type CmsSection } from '@/services/cms.service';
 
 export default function AdminContentPage() {
   const [content, setContent] = useState<CmsContent | null>(null);
@@ -25,11 +24,11 @@ export default function AdminContentPage() {
       try {
         const data = await fetchCmsContent();
         if (!cancelled) {
-          setContent(data || ({ id: 1, ...adminWebsiteContent, updated_at: '' } as CmsContent));
+          setContent(data ?? defaultCmsContent());
         }
       } catch {
         if (!cancelled) {
-          setContent({ id: 1, ...adminWebsiteContent, updated_at: '' } as CmsContent);
+          setContent(defaultCmsContent());
           toast.error('Using fallback content — database unavailable');
         }
       } finally {
@@ -74,11 +73,12 @@ export default function AdminContentPage() {
     );
   }
 
-  const hero = content?.hero || adminWebsiteContent.hero;
-  const stats = content?.stats || adminWebsiteContent.stats;
-  const footer = content?.footer || adminWebsiteContent.footer;
-  const contact = content?.contact || adminWebsiteContent.contact;
-  const company = content?.company || adminWebsiteContent.company;
+  const fallback = defaultCmsContent();
+  const hero = content?.hero || fallback.hero;
+  const stats = content?.stats || fallback.stats;
+  const footer = content?.footer || fallback.footer;
+  const contact = content?.contact || fallback.contact;
+  const company = content?.company || fallback.company;
 
   const [heroForm, setHeroForm] = useState(hero);
   const [statsForm, setStatsForm] = useState(stats);
@@ -94,7 +94,7 @@ export default function AdminContentPage() {
     setContactForm(contact);
     setCompanyForm(company);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [content?.updated_at]);
+  }, [content?.updatedAt]);
 
   return (
     <div className="space-y-6">
@@ -305,9 +305,9 @@ export default function AdminContentPage() {
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground">Contact:</span> <StatusBadge status="Published" />
             </div>
-            {content?.updated_at && (
+            {content?.updatedAt && (
               <Badge variant="secondary" className="ml-auto">
-                Last updated: {new Date(content.updated_at).toLocaleString('en-IN')}
+                Last updated: {new Date(content.updatedAt).toLocaleString('en-IN')}
               </Badge>
             )}
           </div>

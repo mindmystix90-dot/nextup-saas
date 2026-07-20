@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { fetchCmsContent, type CmsContent } from '@/lib/supabase/cms';
-import { adminWebsiteContent } from '@/lib/data/admin';
+import { fetchCmsContent, defaultCmsContent, type CmsContent } from '@/services/cms.service';
 
 export function useCmsContent() {
   const [content, setContent] = useState<CmsContent | null>(null);
@@ -13,9 +12,9 @@ export function useCmsContent() {
     (async () => {
       try {
         const data = await fetchCmsContent();
-        if (!cancelled) setContent(data);
+        if (!cancelled) setContent(data ?? defaultCmsContent());
       } catch {
-        // Use null — callers fall back to static data
+        if (!cancelled) setContent(defaultCmsContent());
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -23,13 +22,14 @@ export function useCmsContent() {
     return () => { cancelled = true; };
   }, []);
 
+  const fallback = defaultCmsContent();
   return {
     content,
     loading,
-    hero: content?.hero || adminWebsiteContent.hero,
-    stats: content?.stats || adminWebsiteContent.stats,
-    footer: content?.footer || adminWebsiteContent.footer,
-    contact: content?.contact || adminWebsiteContent.contact,
-    company: content?.company || adminWebsiteContent.company,
+    hero: content?.hero || fallback.hero,
+    stats: content?.stats || fallback.stats,
+    footer: content?.footer || fallback.footer,
+    contact: content?.contact || fallback.contact,
+    company: content?.company || fallback.company,
   };
 }

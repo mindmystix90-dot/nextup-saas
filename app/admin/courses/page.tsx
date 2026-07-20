@@ -50,7 +50,7 @@ import {
 import { AdminPageHeader, StatusBadge } from '@/components/admin/admin-page-header';
 import { getIcon } from '@/lib/icons';
 import { toast } from 'sonner';
-import { fetchCourses, createCourse, updateCourse, deleteCourse, type Course, type CourseInput } from '@/lib/supabase/courses';
+import { fetchCourses, createCourse, updateCourse, deleteCourse, type Course, type CourseInput } from '@/services/courses.service';
 
 const ICON_OPTIONS = ['Megaphone', 'Bot', 'Briefcase', 'PenTool', 'MessageSquare', 'ShoppingBag', 'Laptop', 'UserCircle', 'BookOpen', 'GraduationCap', 'TrendingUp', 'Rocket'];
 const GRADIENT_OPTIONS = [

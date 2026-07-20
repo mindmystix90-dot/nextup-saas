@@ -12,7 +12,7 @@ import { getIcon } from '@/lib/icons';
 import { courses as fallbackCourses } from '@/lib/data/site';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { fetchPublishedCourses, type Course } from '@/lib/supabase/courses';
+import { fetchPublishedCourses, type Course } from '@/services/courses.service';
 
 type Level = 'All' | 'Beginner' | 'Intermediate' | 'Advanced';
 
