@@ -1,5 +1,6 @@
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { getFirestoreDb, firebaseReady } from '@/lib/firebase';
+import type { Payment } from '@/types';
 
 export interface DashboardStats {
   users: number;
@@ -91,4 +92,22 @@ export async function fetchRecentPayments(limit = 5): Promise<PaymentRow[]> {
     return tb - ta;
   });
   return all.slice(0, limit);
+}
+
+export async function fetchUserPayments(uid: string): Promise<Payment[]> {
+  if (!firebaseReady) return [];
+  const db = getFirestoreDb();
+  const snap = await getDocs(query(collection(db, 'payments'), where('uid', '==', uid)));
+  const all = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Payment, 'id'>) }));
+  all.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  return all;
+}
+
+export async function fetchAllPayments(): Promise<Payment[]> {
+  if (!firebaseReady) return [];
+  const db = getFirestoreDb();
+  const snap = await getDocs(collection(db, 'payments'));
+  const all = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Payment, 'id'>) }));
+  all.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  return all;
 }

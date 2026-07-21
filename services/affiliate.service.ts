@@ -9,8 +9,8 @@ const REFERRALS_COLLECTION = 'referrals';
 
 function emptyStats(uid: string): AffiliateStats {
   return {
-    uid, referralCode: '', clicks: 0, registrations: 0, sales: 0,
-    pendingCommission: 0, paidCommission: 0, availableBalance: 0,
+    uid, referralCode: '', referralLink: '', enabled: false, clicks: 0, registrations: 0, sales: 0,
+    pendingCommission: 0, paidCommission: 0, availableBalance: 0, commissionRate: 10,
   };
 }
 
@@ -44,5 +44,33 @@ export async function fetchAllAffiliateStats(): Promise<AffiliateStats[]> {
   if (!firebaseReady) return [];
   const db = getFirestoreDb();
   const snap = await getDocs(collection(db, AFFILIATE_COLLECTION));
-  return snap.docs.map((d) => d.data() as AffiliateStats);
+  return snap.docs.map((d) => ({ ...emptyStats(d.id), ...(d.data() as AffiliateStats) }));
+}
+
+export async function adminSetAffiliateEnabled(uid: string, enabled: boolean): Promise<void> {
+  if (!firebaseReady) throw new Error('Firebase is not configured.');
+  const db = getFirestoreDb();
+  const ref = doc(db, AFFILIATE_COLLECTION, uid);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) {
+    await setDoc(ref, { ...emptyStats(uid), referralCode: generateCode(uid), enabled, updatedAt: new Date().toISOString() });
+  } else {
+    await updateDoc(ref, { enabled, updatedAt: new Date().toISOString() });
+  }
+}
+
+export async function adminAdjustCommission(uid: string, pending: number, paid: number): Promise<void> {
+  if (!firebaseReady) throw new Error('Firebase is not configured.');
+  const db = getFirestoreDb();
+  await updateDoc(doc(db, AFFILIATE_COLLECTION, uid), {
+    pendingCommission: pending, paidCommission: paid, updatedAt: new Date().toISOString(),
+  });
+}
+
+export async function adminSetCommissionRate(uid: string, rate: number): Promise<void> {
+  if (!firebaseReady) throw new Error('Firebase is not configured.');
+  const db = getFirestoreDb();
+  await updateDoc(doc(db, AFFILIATE_COLLECTION, uid), {
+    commissionRate: rate, updatedAt: new Date().toISOString(),
+  });
 }

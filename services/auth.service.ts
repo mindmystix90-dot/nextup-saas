@@ -11,7 +11,7 @@ import {
   type User as FirebaseUser,
 } from 'firebase/auth';
 import { doc, getDoc, onSnapshot, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
-import type { AuthResult, FirestoreProfile, Membership, Role, SessionUser } from '@/types';
+import type { AuthResult, FirestoreProfile, Membership, MembershipStatus, Role, SessionUser } from '@/types';
 import { firebaseReady, getFirebaseAuth, getFirestoreDb, googleProvider } from '@/lib/firebase';
 
 const USERS_COLLECTION = 'users';
@@ -290,14 +290,51 @@ export const authService = {
     return this.adminUpdateUser(uid, { role });
   },
 
-  async adminSetMembership(uid: string, membership: Membership): Promise<AuthResult> {
-    const result = await this.adminUpdateUser(uid, { membership });
+  async adminSetMembership(
+    uid: string,
+    membership: Membership,
+    options?: { start?: string; expiry?: string; status?: MembershipStatus }
+  ): Promise<AuthResult> {
+    const now = new Date().toISOString();
+    const start = options?.start || now;
+    const status = options?.status || 'active';
+    const result = await this.adminUpdateUser(uid, {
+      membership,
+      membershipStart: start,
+      membershipExpiry: options?.expiry || '',
+      membershipStatus: status,
+    });
     if (result.ok) {
       try {
         const { syncUserAccessibleCourses, fetchUserPurchasedCourses } = await import('@/services/courses.service');
         const purchased = await fetchUserPurchasedCourses(uid);
         await syncUserAccessibleCourses(uid, membership, purchased);
       } catch { /* best-effort sync */ }
+    }
+    return result;
+  },
+
+  async adminExtendMembership(uid: string, membership: Membership, extraDays: number): Promise<AuthResult> {
+    if (!firebaseReady) return { ok: false, error: 'Firebase is not configured.' };
+    try {
+      const profile = await fetchProfile(uid);
+      const currentExpiry = profile?.membershipExpiry ? new Date(profile.membershipExpiry) : new Date();
+      const base = currentExpiry > new Date() ? currentExpiry : new Date();
+      const newExpiry = new Date(base.getTime() + extraDays * 86400000).toISOString();
+      return this.adminSetMembership(uid, membership, { start: profile?.membershipStart || new Date().toISOString(), expiry: newExpiry, status: 'active' });
+    } catch (err) {
+      return { ok: false, error: friendlyAuthError((err as { code?: string }).code) };
+    }
+  },
+
+  async adminCancelMembership(uid: string): Promise<AuthResult> {
+    const result = await this.adminUpdateUser(uid, { membershipStatus: 'cancelled', membershipExpiry: new Date().toISOString() });
+    if (result.ok) {
+      try {
+        const { syncUserAccessibleCourses, fetchUserPurchasedCourses } = await import('@/services/courses.service');
+        const purchased = await fetchUserPurchasedCourses(uid);
+        await syncUserAccessibleCourses(uid, 'starter', purchased);
+      } catch { /* best-effort */ }
     }
     return result;
   },

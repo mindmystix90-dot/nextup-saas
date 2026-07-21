@@ -5,6 +5,7 @@ import {
   getDoc,
   getDocs,
   query,
+  where,
   orderBy,
   setDoc,
   updateDoc,
@@ -14,7 +15,7 @@ import {
 } from 'firebase/firestore';
 import { getFirestoreDb, firebaseReady } from '@/lib/firebase';
 
-import type { CourseAccessLevel, PurchaseType, Membership } from '@/types';
+import type { CourseAccessLevel, PurchaseType, Membership, CourseProgressRecord } from '@/types';
 
 const COURSES_COLLECTION = 'courses';
 const ACCESS_COLLECTION = 'course_access';
@@ -159,6 +160,52 @@ export async function removeCourseFromUser(uid: string, courseId: string): Promi
   await setDoc(
     doc(db, ACCESS_COLLECTION, uid),
     { courseIds: arrayRemove(courseId), updatedAt: serverTimestamp() },
+    { merge: true }
+  );
+}
+
+// ===== Course Progress =====
+
+const PROGRESS_COLLECTION = 'course_progress';
+
+export async function fetchUserCourseProgress(uid: string): Promise<CourseProgressRecord[]> {
+  if (!firebaseReady) return [];
+  const db = getFirestoreDb();
+  const snap = await getDocs(
+    query(collection(db, PROGRESS_COLLECTION), where('uid', '==', uid))
+  );
+  return snap.docs.map((d) => d.data() as CourseProgressRecord);
+}
+
+export async function fetchUserCompletedCourses(uid: string): Promise<string[]> {
+  const records = await fetchUserCourseProgress(uid);
+  return records.filter((r) => r.status === 'completed').map((r) => r.courseId);
+}
+
+export async function adminResetCourseProgress(uid: string, courseId: string): Promise<void> {
+  if (!firebaseReady) throw new Error('Firebase is not configured.');
+  const db = getFirestoreDb();
+  const snap = await getDocs(
+    query(collection(db, PROGRESS_COLLECTION), where('uid', '==', uid), where('courseId', '==', courseId))
+  );
+  await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)));
+  await setDoc(
+    doc(db, 'users', uid),
+    { completedCourses: arrayRemove(courseId), updatedAt: serverTimestamp() },
+    { merge: true }
+  );
+}
+
+export async function adminResetAllProgress(uid: string): Promise<void> {
+  if (!firebaseReady) throw new Error('Firebase is not configured.');
+  const db = getFirestoreDb();
+  const snap = await getDocs(
+    query(collection(db, PROGRESS_COLLECTION), where('uid', '==', uid))
+  );
+  await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)));
+  await setDoc(
+    doc(db, 'users', uid),
+    { completedCourses: [], updatedAt: serverTimestamp() },
     { merge: true }
   );
 }

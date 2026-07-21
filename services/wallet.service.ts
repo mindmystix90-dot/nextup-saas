@@ -194,6 +194,28 @@ export async function adminUpdateKycStatus(uid: string, status: KycStatus, rejec
   });
 }
 
+export async function adminUpdateKyc(
+  uid: string,
+  data: { accountHolder: string; bankName: string; accountNumber: string; ifsc: string; upiId?: string; status?: KycStatus }
+): Promise<void> {
+  if (!firebaseReady) throw new Error('Firebase is not configured.');
+  const db = getFirestoreDb();
+  await setDoc(
+    doc(db, KYC_COLLECTION, uid),
+    {
+      uid,
+      accountHolder: data.accountHolder,
+      bankName: data.bankName,
+      accountNumber: data.accountNumber,
+      ifsc: data.ifsc,
+      upiId: data.upiId || '',
+      status: data.status || 'pending',
+      updatedAt: new Date().toISOString(),
+    },
+    { merge: true }
+  );
+}
+
 export async function fetchAllKyc(): Promise<KycInfo[]> {
   if (!firebaseReady) return [];
   const db = getFirestoreDb();

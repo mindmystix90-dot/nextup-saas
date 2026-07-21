@@ -1,5 +1,6 @@
 export type Role = 'superadmin' | 'admin' | 'instructor' | 'student' | 'affiliate' | 'user';
 export type Membership = 'starter' | 'pro' | 'lifetime';
+export type MembershipStatus = 'active' | 'expired' | 'cancelled' | 'pending';
 export type CourseAccessLevel = 'public' | 'starter' | 'pro' | 'lifetime';
 export type PurchaseType = 'free' | 'membership_only' | 'one_time' | 'both';
 
@@ -31,10 +32,15 @@ export interface FirestoreProfile {
   photoURL: string;
   role: Role;
   membership: Membership;
+  membershipStatus?: MembershipStatus;
+  membershipStart?: string;
+  membershipExpiry?: string;
   address?: string;
   suspended?: boolean;
   purchasedCourses?: string[];
   accessibleCourses?: string[];
+  completedCourses?: string[];
+  affiliateEnabled?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -141,6 +147,43 @@ export interface Withdrawal {
   accountHolder?: string;
 }
 
+// ===== Payments =====
+
+export type PaymentType = 'membership' | 'course' | 'refund';
+export type PaymentStatus = 'completed' | 'pending' | 'failed' | 'refunded';
+export type PaymentMethod = 'razorpay' | 'upi' | 'card' | 'netbanking' | 'wallet' | 'manual';
+
+export interface Payment {
+  id: string;
+  uid: string;
+  userName: string;
+  userEmail: string;
+  type: PaymentType;
+  itemName: string;
+  itemId?: string;
+  amount: number;
+  status: PaymentStatus;
+  method: PaymentMethod;
+  invoiceId?: string;
+  date: string;
+  refundAmount?: number;
+}
+
+// ===== Course Progress =====
+
+export interface CourseProgressRecord {
+  uid: string;
+  courseId: string;
+  courseTitle: string;
+  progress: number;
+  completedLessons: number;
+  totalLessons: number;
+  status: 'not-started' | 'in-progress' | 'completed';
+  startedAt?: string;
+  completedAt?: string;
+  updatedAt?: string;
+}
+
 // ===== Pricing =====
 
 export interface PricingPlan {
@@ -164,12 +207,15 @@ export interface PricingPlan {
 export interface AffiliateStats {
   uid: string;
   referralCode: string;
+  referralLink?: string;
+  enabled: boolean;
   clicks: number;
   registrations: number;
   sales: number;
   pendingCommission: number;
   paidCommission: number;
   availableBalance: number;
+  commissionRate?: number;
   updatedAt?: string;
 }
 
