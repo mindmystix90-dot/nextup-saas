@@ -82,6 +82,8 @@ const EMPTY_FORM: CourseInput = {
   banner: '',
   videoUrl: '',
   resourceUrl: '',
+  accessLevel: 'public',
+  purchaseType: 'free',
 };
 
 export default function AdminCoursesPage() {
@@ -151,6 +153,8 @@ export default function AdminCoursesPage() {
       banner: c.banner || '',
       videoUrl: c.videoUrl || '',
       resourceUrl: c.resourceUrl || '',
+      accessLevel: c.accessLevel || 'public',
+      purchaseType: c.purchaseType || 'free',
     });
     setDialogOpen(true);
   }
@@ -464,6 +468,32 @@ export default function AdminCoursesPage() {
               <div className="space-y-2">
                 <Label>Sort order</Label>
                 <Input type="number" value={form.sort_order} onChange={(e) => setForm((f) => ({ ...f, sort_order: Number(e.target.value) }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Access level</Label>
+                <Select value={form.accessLevel} onValueChange={(v) => setForm((f) => ({ ...f, accessLevel: v as Course['accessLevel'] }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="public">Public</SelectItem>
+                    <SelectItem value="starter">Starter</SelectItem>
+                    <SelectItem value="pro">Pro</SelectItem>
+                    <SelectItem value="lifetime">Lifetime</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Purchase type</Label>
+                <Select value={form.purchaseType} onValueChange={(v) => setForm((f) => ({ ...f, purchaseType: v as Course['purchaseType'] }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="free">Free</SelectItem>
+                    <SelectItem value="membership_only">Membership Only</SelectItem>
+                    <SelectItem value="one_time">One-Time Purchase</SelectItem>
+                    <SelectItem value="both">Both Membership + Purchase</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="space-y-2">

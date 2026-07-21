@@ -291,7 +291,15 @@ export const authService = {
   },
 
   async adminSetMembership(uid: string, membership: Membership): Promise<AuthResult> {
-    return this.adminUpdateUser(uid, { membership });
+    const result = await this.adminUpdateUser(uid, { membership });
+    if (result.ok) {
+      try {
+        const { syncUserAccessibleCourses, fetchUserPurchasedCourses } = await import('@/services/courses.service');
+        const purchased = await fetchUserPurchasedCourses(uid);
+        await syncUserAccessibleCourses(uid, membership, purchased);
+      } catch { /* best-effort sync */ }
+    }
+    return result;
   },
 
   async adminSuspendUser(uid: string, suspended: boolean): Promise<AuthResult> {

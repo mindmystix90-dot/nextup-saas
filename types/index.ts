@@ -1,5 +1,7 @@
 export type Role = 'superadmin' | 'admin' | 'instructor' | 'student' | 'affiliate' | 'user';
 export type Membership = 'starter' | 'pro' | 'lifetime';
+export type CourseAccessLevel = 'public' | 'starter' | 'pro' | 'lifetime';
+export type PurchaseType = 'free' | 'membership_only' | 'one_time' | 'both';
 
 export interface BaseUser {
   name: string;
@@ -31,6 +33,8 @@ export interface FirestoreProfile {
   membership: Membership;
   address?: string;
   suspended?: boolean;
+  purchasedCourses?: string[];
+  accessibleCourses?: string[];
   createdAt: string;
   updatedAt: string;
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Users as UsersIcon, Search, MoreHorizontal, Pencil, Trash2, Ban, KeyRound, ShieldCheck, Loader2, Eye } from 'lucide-react';
+import { Users as UsersIcon, Search, MoreHorizontal, Pencil, Trash2, Ban, KeyRound, ShieldCheck, Loader2, Eye, Plus, X, BookOpen, CheckCircle2, Lock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { AdminPageHeader, StatusBadge } from '@/components/admin/admin-page-header';
 import { toast } from 'sonner';
 import { authService } from '@/services/auth.service';
+import { fetchCourses, fetchUserPurchasedCourses, adminAssignPurchasedCourse, adminRemovePurchasedCourse, syncUserAccessibleCourses, type Course } from '@/services/courses.service';
 import type { Role, Membership, FirestoreProfile } from '@/types';
 
 const ROLE_OPTIONS: Role[] = ['superadmin', 'admin', 'instructor', 'student', 'affiliate', 'user'];
@@ -37,6 +38,10 @@ export default function AdminUsersPage() {
   const [deleteTarget, setDeleteTarget] = useState<FirestoreProfile | null>(null);
   const [editForm, setEditForm] = useState({ name: '', role: 'student' as Role, membership: 'starter' as Membership });
   const [saving, setSaving] = useState(false);
+  const [allCourses, setAllCourses] = useState<Course[]>([]);
+  const [purchasedIds, setPurchasedIds] = useState<string[]>([]);
+  const [accessibleIds, setAccessibleIds] = useState<string[]>([]);
+  const [assignCourseId, setAssignCourseId] = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -51,6 +56,12 @@ export default function AdminUsersPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  useEffect(() => {
+    (async () => {
+      try { setAllCourses(await fetchCourses()); } catch { /* best-effort */ }
+    })();
+  }, []);
+
   const filtered = useMemo(() => {
     return users.filter((u) => {
       const matchQuery =
@@ -64,9 +75,45 @@ export default function AdminUsersPage() {
     });
   }, [users, query, roleFilter, membershipFilter, statusFilter]);
 
-  function openEdit(u: FirestoreProfile) {
+  async function openEdit(u: FirestoreProfile) {
     setEditUser(u);
     setEditForm({ name: u.name || '', role: u.role || 'student', membership: u.membership || 'starter' });
+    try {
+      const [p, a] = await Promise.all([
+        fetchUserPurchasedCourses(u.uid),
+        (await import('@/services/courses.service')).fetchUserCourseAccess(u.uid),
+      ]);
+      setPurchasedIds(p);
+      setAccessibleIds(a);
+    } catch {
+      setPurchasedIds([]);
+      setAccessibleIds([]);
+    }
+  }
+
+  async function handleAssignCourse() {
+    if (!editUser || !assignCourseId) return;
+    try {
+      await adminAssignPurchasedCourse(editUser.uid, assignCourseId);
+      const p = await fetchUserPurchasedCourses(editUser.uid);
+      setPurchasedIds(p);
+      const a = await syncUserAccessibleCourses(editUser.uid, editForm.membership, p);
+      setAccessibleIds(a);
+      setAssignCourseId('');
+      toast.success('Course assigned');
+    } catch { toast.error('Failed to assign course'); }
+  }
+
+  async function handleRemoveCourse(courseId: string) {
+    if (!editUser) return;
+    try {
+      await adminRemovePurchasedCourse(editUser.uid, courseId);
+      const p = await fetchUserPurchasedCourses(editUser.uid);
+      setPurchasedIds(p);
+      const a = await syncUserAccessibleCourses(editUser.uid, editForm.membership, p);
+      setAccessibleIds(a);
+      toast.success('Course removed');
+    } catch { toast.error('Failed to remove course'); }
   }
 
   async function saveEdit() {
@@ -74,6 +121,9 @@ export default function AdminUsersPage() {
     setSaving(true);
     try {
       await authService.adminUpdateUser(editUser.uid, { name: editForm.name, role: editForm.role, membership: editForm.membership });
+      const p = await fetchUserPurchasedCourses(editUser.uid);
+      const a = await syncUserAccessibleCourses(editUser.uid, editForm.membership, p);
+      setAccessibleIds(a);
       toast.success(`${editForm.name || editUser.email} updated`);
       setEditUser(null);
       await load();
@@ -282,6 +332,7 @@ export default function AdminUsersPage() {
             <DialogDescription>Update profile, role and membership for {editUser?.email}</DialogDescription>
           </DialogHeader>
           {editUser && (
+            <>
             <div className="space-y-4 py-2">
               <div className="space-y-2">
                 <Label htmlFor="edit-name">Full name</Label>
@@ -308,6 +359,77 @@ export default function AdminUsersPage() {
                 Role changes take effect on next sign-in.
               </div>
             </div>
+
+            {/* Course management */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 pt-2 border-t border-border">
+                <BookOpen className="h-4 w-4 text-primary" />
+                <p className="text-sm font-semibold">Course access</p>
+              </div>
+
+              {/* Assign course */}
+              <div className="flex items-center gap-2">
+                <Select value={assignCourseId} onValueChange={setAssignCourseId}>
+                  <SelectTrigger className="flex-1"><SelectValue placeholder="Select a course to assign…" /></SelectTrigger>
+                  <SelectContent>
+                    {allCourses
+                      .filter((c) => !purchasedIds.includes(c.id))
+                      .map((c) => <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Button size="sm" onClick={handleAssignCourse} disabled={!assignCourseId} className="bg-brand-gradient font-semibold">
+                  <Plus className="h-4 w-4" /> Assign
+                </Button>
+              </div>
+
+              {/* Purchased courses */}
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Purchased courses ({purchasedIds.length})</p>
+                {purchasedIds.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-2">No individually purchased courses.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {purchasedIds.map((id) => {
+                      const c = allCourses.find((x) => x.id === id);
+                      return (
+                        <div key={id} className="flex items-center gap-2 rounded-lg border border-border p-2">
+                          <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
+                          <span className="flex-1 text-xs font-medium truncate">{c?.title || id.slice(0, 12)}</span>
+                          <button onClick={() => handleRemoveCourse(id)} className="text-destructive hover:bg-destructive/10 rounded p-1">
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Accessible courses (membership-based) */}
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Accessible via {membershipLabel(editForm.membership)} ({accessibleIds.length})</p>
+                {accessibleIds.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-2">No courses accessible at current membership level.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {accessibleIds.map((id) => {
+                      const c = allCourses.find((x) => x.id === id);
+                      return (
+                        <Badge key={id} variant="secondary" className="text-xs">
+                          {c?.title || id.slice(0, 12)}
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 rounded-xl border border-border bg-secondary/40 p-3 text-xs text-muted-foreground">
+                <ShieldCheck className="h-4 w-4 text-primary shrink-0" />
+                Accessible courses update automatically when membership or purchased courses change.
+              </div>
+            </div>
+            </>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditUser(null)}>Cancel</Button>
