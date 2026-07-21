@@ -51,7 +51,7 @@ import { AdminPageHeader, StatusBadge } from '@/components/admin/admin-page-head
 import { getIcon } from '@/lib/icons';
 import { toast } from 'sonner';
 import { fetchCourses, createCourse, updateCourse, deleteCourse, type Course, type CourseInput } from '@/services/courses.service';
-import { uploadCourseImage } from '@/services/storage.service';
+import { uploadCourseImage, uploadCourseBanner, uploadCourseVideo, uploadCoursePdf } from '@/services/storage.service';
 
 const ICON_OPTIONS = ['Megaphone', 'Bot', 'Briefcase', 'PenTool', 'MessageSquare', 'ShoppingBag', 'Laptop', 'UserCircle', 'BookOpen', 'GraduationCap', 'TrendingUp', 'Rocket'];
 const GRADIENT_OPTIONS = [
@@ -79,6 +79,9 @@ const EMPTY_FORM: CourseInput = {
   status: 'Draft',
   sort_order: 0,
   image: '',
+  banner: '',
+  videoUrl: '',
+  resourceUrl: '',
 };
 
 export default function AdminCoursesPage() {
@@ -145,8 +148,47 @@ export default function AdminCoursesPage() {
       status: c.status,
       sort_order: c.sort_order,
       image: c.image || '',
+      banner: c.banner || '',
+      videoUrl: c.videoUrl || '',
+      resourceUrl: c.resourceUrl || '',
     });
     setDialogOpen(true);
+  }
+
+  async function handleBannerUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const tempId = editCourse?.id || `temp-${Date.now()}`;
+      const url = await uploadCourseBanner(tempId, file);
+      setForm((f) => ({ ...f, banner: url }));
+      toast.success('Banner uploaded');
+    } catch { toast.error('Failed to upload banner'); } finally { setUploadingImage(false); }
+  }
+
+  async function handleVideoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const tempId = editCourse?.id || `temp-${Date.now()}`;
+      const url = await uploadCourseVideo(tempId, 'intro', file);
+      setForm((f) => ({ ...f, videoUrl: url }));
+      toast.success('Video uploaded');
+    } catch { toast.error('Failed to upload video'); } finally { setUploadingImage(false); }
+  }
+
+  async function handlePdfUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const tempId = editCourse?.id || `temp-${Date.now()}`;
+      const url = await uploadCoursePdf(tempId, 'resource', file);
+      setForm((f) => ({ ...f, resourceUrl: url }));
+      toast.success('PDF uploaded');
+    } catch { toast.error('Failed to upload PDF'); } finally { setUploadingImage(false); }
   }
 
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -443,6 +485,66 @@ export default function AdminCoursesPage() {
                   <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setForm((f) => ({ ...f, image: '' }))}>
                     Remove
                   </Button>
+                )}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Course banner (optional)</Label>
+              <div className="flex items-center gap-4">
+                {form.banner ? (
+                  <img src={form.banner} alt="Banner" className="h-16 w-32 rounded-lg object-cover border border-border" />
+                ) : (
+                  <span className="flex h-16 w-32 items-center justify-center rounded-lg bg-secondary text-muted-foreground text-xs">No banner</span>
+                )}
+                <label className="cursor-pointer">
+                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-secondary transition-colors">
+                    {uploadingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    Upload banner
+                  </span>
+                  <input type="file" accept="image/*" className="hidden" onChange={handleBannerUpload} disabled={uploadingImage} />
+                </label>
+                {form.banner && (
+                  <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setForm((f) => ({ ...f, banner: '' }))}>Remove</Button>
+                )}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Intro video (optional)</Label>
+              <div className="flex items-center gap-4">
+                {form.videoUrl ? (
+                  <span className="text-xs text-success truncate max-w-32">Video uploaded</span>
+                ) : (
+                  <span className="text-xs text-muted-foreground">No video</span>
+                )}
+                <label className="cursor-pointer">
+                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-secondary transition-colors">
+                    {uploadingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    Upload video
+                  </span>
+                  <input type="file" accept="video/*" className="hidden" onChange={handleVideoUpload} disabled={uploadingImage} />
+                </label>
+                {form.videoUrl && (
+                  <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setForm((f) => ({ ...f, videoUrl: '' }))}>Remove</Button>
+                )}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>PDF resource (optional)</Label>
+              <div className="flex items-center gap-4">
+                {form.resourceUrl ? (
+                  <span className="text-xs text-success truncate max-w-32">PDF uploaded</span>
+                ) : (
+                  <span className="text-xs text-muted-foreground">No PDF</span>
+                )}
+                <label className="cursor-pointer">
+                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-secondary transition-colors">
+                    {uploadingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    Upload PDF
+                  </span>
+                  <input type="file" accept="application/pdf" className="hidden" onChange={handlePdfUpload} disabled={uploadingImage} />
+                </label>
+                {form.resourceUrl && (
+                  <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setForm((f) => ({ ...f, resourceUrl: '' }))}>Remove</Button>
                 )}
               </div>
             </div>

@@ -86,17 +86,11 @@ export const quickActions: {
 export const walletBalance = '₹3,199';
 export const totalEarnings = '₹18,450';
 export const walletTransactions: {
-  type: 'in' | 'out';
+  type: string;
   label: string;
   amount: string;
   date: string;
-}[] = [
-  { type: 'in', label: 'Course refund — Content Creation', amount: '+₹2,499', date: '16 Jul 2026' },
-  { type: 'out', label: 'Course purchase — AI Tools for Work', amount: '-₹2,999', date: '14 Jul 2026' },
-  { type: 'in', label: 'Affiliate payout', amount: '+₹6,000', date: '10 Jul 2026' },
-  { type: 'out', label: 'Pro subscription', amount: '-₹999', date: '1 Jul 2026' },
-  { type: 'in', label: 'Lifetime upgrade credit', amount: '+₹4,999', date: '28 Jun 2026' },
-];
+}[] = [];
 
 export const paymentMethods: { brand: string; last4: string; exp: string }[] = [
   { brand: 'Visa', last4: '4242', exp: '08/27' },

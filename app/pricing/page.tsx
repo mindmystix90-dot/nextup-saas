@@ -1,121 +1,102 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Check, ArrowRight } from 'lucide-react';
+import { Check, Loader2, Sparkles, ShieldCheck } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/site/navbar';
 import { Footer } from '@/components/site/footer';
-import { Reveal } from '@/components/site/reveal';
-import { SectionHeading } from '@/components/site/section-heading';
-import { PricingCard } from '@/components/site/pricing-card';
-import { Button } from '@/components/ui/button';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
-import { pricing, faqs } from '@/lib/data/site';
-
-const FEATURE_STRIP = [
-  'Expert-led courses',
-  'Verifiable certificates',
-  'Weekly live classes',
-  'Active community',
-  'Progress analytics',
-  'Mobile-friendly',
-  'Priority support',
-  'Lifetime updates',
-];
+import { fetchActivePricingPlans } from '@/services/pricing.service';
+import type { PricingPlan } from '@/types';
 
 export default function PricingPage() {
-  return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <section className="relative overflow-hidden pt-32 md:pt-40 pb-16">
-        <div className="absolute inset-0 -z-10">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 h-[400px] w-[700px] rounded-full bg-brand-gradient opacity-10 blur-[120px]" />
-        </div>
-        <div className="container">
-          <Reveal>
-            <div className="max-w-2xl mx-auto text-center">
-              <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
-                Pricing
-              </span>
-              <h1 className="mt-4 font-display text-4xl md:text-5xl font-bold tracking-tight leading-[1.1]">
-                Simple, <span className="text-gradient">honest</span> pricing
-              </h1>
-              <p className="mt-4 text-base md:text-lg text-muted-foreground leading-relaxed">
-                Start free. Upgrade when you&apos;re ready. Cancel anytime.
-              </p>
-            </div>
-          </Reveal>
+  const [plans, setPlans] = useState<PricingPlan[]>([]);
+  const [loading, setLoading] = useState(true);
 
-          <div className="mt-14 grid md:grid-cols-3 gap-6 lg:gap-8 max-w-5xl mx-auto">
-            {pricing.plans.map((plan, i) => (
-              <Reveal key={plan.name} delay={i * 100}>
-                <PricingCard {...plan} />
-              </Reveal>
-            ))}
+  useEffect(() => {
+    (async () => {
+      try {
+        const p = await fetchActivePricingPlans();
+        setPlans(p);
+      } catch { /* best-effort */ } finally { setLoading(false); }
+    })();
+  }, []);
+
+  return (
+    <>
+      <Navbar />
+      <section className="relative pt-20 pb-16">
+        <div className="absolute inset-0 bg-brand-gradient opacity-[0.03] pointer-events-none" />
+        <div className="relative mx-auto max-w-7xl px-4 md:px-6">
+          <div className="mx-auto max-w-2xl text-center">
+            <Badge className="bg-brand-gradient-soft text-primary border-transparent mb-4">
+              <Sparkles className="mr-1.5 h-3.5 w-3.5" /> Pricing
+            </Badge>
+            <h1 className="font-display text-3xl md:text-5xl font-bold tracking-tight">
+              Simple, transparent pricing
+            </h1>
+            <p className="mt-4 text-lg text-muted-foreground">
+              Choose the plan that fits your journey. Cancel anytime.
+            </p>
           </div>
+
+          {loading ? (
+            <div className="flex items-center justify-center py-24"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+          ) : plans.length === 0 ? (
+            <div className="mx-auto max-w-md text-center py-16">
+              <p className="text-muted-foreground">No pricing plans available yet. Please check back soon.</p>
+              <Button asChild className="mt-4 bg-brand-gradient font-semibold">
+                <Link href="/register">Create an account</Link>
+              </Button>
+            </div>
+          ) : (
+            <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {plans.map((plan) => (
+                <Card
+                  key={plan.id}
+                  className={`card-premium card-premium-hover relative overflow-hidden ${plan.featured ? 'border-primary shadow-premium-lg' : ''}`}
+                >
+                  {plan.badge && (
+                    <div className="absolute top-0 right-0 bg-brand-gradient px-3 py-1 text-xs font-semibold text-white rounded-bl-xl">
+                      {plan.badge}
+                    </div>
+                  )}
+                  <CardContent className="p-6">
+                    <h3 className="font-display text-xl font-bold">{plan.name}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">{plan.description}</p>
+                    <div className="mt-4 flex items-baseline gap-1">
+                      <span className="font-display text-4xl font-bold">₹{plan.price.toLocaleString('en-IN')}</span>
+                      <span className="text-sm text-muted-foreground">{plan.period}</span>
+                    </div>
+                    <Button
+                      asChild
+                      className={`mt-6 w-full font-semibold ${plan.featured ? 'bg-brand-gradient' : ''}`}
+                      variant={plan.featured ? 'default' : 'outline'}
+                    >
+                      <Link href="/register">{plan.cta}</Link>
+                    </Button>
+                    <ul className="mt-6 space-y-3">
+                      {plan.features.map((f, i) => (
+                        <li key={i} className="flex items-start gap-2.5 text-sm">
+                          <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                          <span className="text-foreground">{f}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
           <p className="mt-8 text-center text-sm text-muted-foreground">
-            {pricing.guarantee}
+            All plans include a 7-day money-back guarantee. No questions asked.
           </p>
         </div>
       </section>
-
-      {/* Comparison / features strip */}
-      <section className="container section-padding">
-        <Reveal>
-          <SectionHeading
-            eyebrow="Why NextUp"
-            title={<>More than just <span className="text-gradient">courses</span></>}
-            description="Every plan includes access to the features that make learning stick."
-          />
-        </Reveal>
-        <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {FEATURE_STRIP.map((f, i) => (
-            <Reveal key={f} delay={i * 50}>
-              <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-success/15 text-success">
-                  <Check className="h-4 w-4" />
-                </span>
-                <span className="text-sm font-medium">{f}</span>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section className="container pb-24">
-        <Reveal>
-          <SectionHeading eyebrow="FAQ" title="Frequently asked questions" />
-        </Reveal>
-        <div className="mt-10 max-w-3xl mx-auto">
-          <Reveal>
-            <Accordion type="single" collapsible className="space-y-3">
-              {faqs.map((item, i) => (
-                <AccordionItem key={i} value={`item-${i}`} className="rounded-2xl border border-border bg-card px-5">
-                  <AccordionTrigger className="text-left font-semibold hover:no-underline">
-                    {item.q}
-                  </AccordionTrigger>
-                  <AccordionContent className="text-sm text-muted-foreground leading-relaxed">
-                    {item.a}
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          </Reveal>
-        </div>
-        <div className="mt-12 text-center">
-          <p className="text-sm text-muted-foreground">Still have questions?</p>
-          <Button asChild variant="outline" className="mt-3 font-semibold">
-            <Link href="/contact">Contact us <ArrowRight className="ml-2 h-4 w-4" /></Link>
-          </Button>
-        </div>
-      </section>
-
       <Footer />
-    </div>
+    </>
   );
 }

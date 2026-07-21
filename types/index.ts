@@ -56,13 +56,6 @@ export interface Certificate {
   icon: string;
 }
 
-export interface WalletTransaction {
-  type: 'in' | 'out';
-  label: string;
-  amount: string;
-  date: string;
-}
-
 export interface Discussion {
   name: string;
   role: string;
@@ -83,4 +76,106 @@ export interface LiveClass {
   time: string;
   watching: string;
   category: string;
+}
+
+// ===== Wallet & Payments =====
+
+export type TransactionType = 'credit' | 'debit' | 'withdrawal' | 'referral' | 'bonus' | 'purchase' | 'refund';
+export type TransactionStatus = 'completed' | 'pending' | 'failed';
+export type KycStatus = 'pending' | 'verified' | 'rejected';
+export type WithdrawalMethod = 'upi' | 'bank';
+export type WithdrawalStatus = 'pending' | 'approved' | 'rejected' | 'paid';
+
+export interface WalletData {
+  uid: string;
+  balance: number;
+  lifetimeEarnings: number;
+  pendingWithdrawals: number;
+  completedWithdrawals: number;
+  updatedAt?: string;
+}
+
+export interface WalletTransaction {
+  id: string;
+  uid: string;
+  type: TransactionType;
+  label: string;
+  amount: number;
+  status: TransactionStatus;
+  method?: string;
+  date: string;
+}
+
+export interface KycInfo {
+  uid: string;
+  accountHolder: string;
+  bankName: string;
+  accountNumber: string;
+  ifsc: string;
+  upiId?: string;
+  status: KycStatus;
+  submittedAt: string;
+  reviewedAt?: string;
+  rejectionReason?: string;
+}
+
+export interface Withdrawal {
+  id: string;
+  uid: string;
+  userName: string;
+  userEmail: string;
+  amount: number;
+  method: WithdrawalMethod;
+  status: WithdrawalStatus;
+  requestedAt: string;
+  processedAt?: string;
+  adminNote?: string;
+  upiId?: string;
+  bankName?: string;
+  accountNumber?: string;
+  ifsc?: string;
+  accountHolder?: string;
+}
+
+// ===== Pricing =====
+
+export interface PricingPlan {
+  id: string;
+  name: string;
+  price: number;
+  period: string;
+  description: string;
+  features: string[];
+  cta: string;
+  featured: boolean;
+  badge: string;
+  active: boolean;
+  sort_order: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// ===== Affiliate =====
+
+export interface AffiliateStats {
+  uid: string;
+  referralCode: string;
+  clicks: number;
+  registrations: number;
+  sales: number;
+  pendingCommission: number;
+  paidCommission: number;
+  availableBalance: number;
+  updatedAt?: string;
+}
+
+export interface Referral {
+  id: string;
+  referrerUid: string;
+  referredUid: string;
+  referredName: string;
+  referredEmail: string;
+  status: 'clicked' | 'registered' | 'purchased';
+  commission: number;
+  date: string;
 }
