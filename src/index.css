@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --primary: 222 89% 53%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 222 89% 53%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222 47% 7%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 9%;
+    --card-foreground: 210 40% 98%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 0 0% 98%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --border: 217 33% 20%;
+    --input: 217 33% 20%;
+    --ring: 217 91% 60%;
+  }
+
+  * { border-color: hsl(var(--border)); }
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: 'Inter', system-ui, sans-serif;
+    line-height: 1.5;
+  }
+  h1, h2, h3, h4 { font-family: 'Sora', 'Inter', system-ui, sans-serif; line-height: 1.2; }
+}
+
+@layer components {
+  .card { background: hsl(var(--card)); border: 1px solid hsl(var(--border)); border-radius: var(--radius); }
+  .btn-primary { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); font-weight: 600; border-radius: var(--radius); padding: 0.5rem 1rem; transition: opacity .15s; }
+  .btn-primary:hover { opacity: .9; }
+  .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-secondary { background: hsl(var(--secondary)); color: hsl(var(--secondary-foreground)); font-weight: 600; border-radius: var(--radius); padding: 0.5rem 1rem; transition: opacity .15s; }
+  .btn-secondary:hover { opacity: .9; }
+  .btn-outline { border: 1px solid hsl(var(--border)); color: hsl(var(--foreground)); font-weight: 500; border-radius: var(--radius); padding: 0.5rem 1rem; transition: background .15s; }
+  .btn-outline:hover { background: hsl(var(--secondary)); }
+  .btn-danger { background: hsl(var(--destructive)); color: hsl(var(--destructive-foreground)); font-weight: 600; border-radius: var(--radius); padding: 0.5rem 1rem; }
+  .input-field { width: 100%; border: 1px solid hsl(var(--input)); border-radius: var(--radius); padding: 0.5rem 0.75rem; background: hsl(var(--background)); color: hsl(var(--foreground)); font-size: 0.875rem; outline: none; transition: border-color .15s, box-shadow .15s; }
+  .input-field:focus { border-color: hsl(var(--ring)); box-shadow: 0 0 0 3px hsl(var(--ring) / 0.1); }
+  .badge { display: inline-flex; align-items: center; gap: .25rem; padding: .125rem .5rem; border-radius: .375rem; font-size: .75rem; font-weight: 500; }
+  .badge-default { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+  .badge-secondary { background: hsl(var(--secondary)); color: hsl(var(--secondary-foreground)); }
+  .badge-success { background: hsl(var(--success)); color: hsl(var(--success-foreground)); }
+  .badge-warning { background: hsl(var(--warning)); color: hsl(var(--warning-foreground)); }
+  .badge-danger { background: hsl(var(--destructive)); color: hsl(var(--destructive-foreground)); }
+  .badge-outline { border: 1px solid hsl(var(--border)); color: hsl(var(--foreground)); }
+}
