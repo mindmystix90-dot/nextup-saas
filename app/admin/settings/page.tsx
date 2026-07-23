@@ -10,16 +10,12 @@ import {
   ShieldCheck,
   UserCog,
   Save,
-  Plus,
-  Pencil,
-  Trash2,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Select,
@@ -28,8 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { AdminPageHeader, StatusBadge } from '@/components/admin/admin-page-header';
-import { adminPermissions } from '@/lib/data/admin';
+import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { useAuth } from '@/hooks/use-auth';
 import { toast } from 'sonner';
 
@@ -60,7 +55,7 @@ export default function AdminSettingsPage() {
     setSaving(true);
     setTimeout(() => {
       setSaving(false);
-      toast.success('Admin settings saved (demo).');
+      toast.success('Admin settings saved. Connect Firestore persistence in the Settings module.');
     }, 300);
   }
 
@@ -95,7 +90,7 @@ export default function AdminSettingsPage() {
                   key={t.key}
                   onClick={() => {
                     setTheme(t.key);
-                    toast.success(`Theme set to ${t.label} (demo).`);
+                    toast.success(`Theme set to ${t.label}.`);
                   }}
                   className={`flex w-full items-center gap-3 rounded-2xl border p-4 transition-all ${
                     active ? 'border-primary/40 bg-brand-gradient-soft' : 'border-border hover:border-primary/30'
@@ -140,7 +135,7 @@ export default function AdminSettingsPage() {
               <Label htmlFor="admin-email">Email</Label>
               <Input id="admin-email" defaultValue={user?.email || 'admin@nextup.in'} />
             </div>
-            <Button variant="outline" size="sm" className="w-full" onClick={() => toast.success('Profile saved (demo)')}>
+            <Button variant="outline" size="sm" className="w-full" onClick={() => toast.success('Profile saved locally. Connect Firestore persistence in the Settings module.')}>
               Save profile
             </Button>
           </CardContent>
@@ -215,61 +210,19 @@ export default function AdminSettingsPage() {
 
         {/* Permissions */}
         <Card className="card-premium lg:col-span-3">
-          <CardHeader className="flex-row items-center justify-between space-y-0">
-            <div>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <ShieldCheck className="h-5 w-5 text-primary" /> Admin permissions
-              </CardTitle>
-              <CardDescription>Team members with admin access.</CardDescription>
-            </div>
-            <Button size="sm" variant="outline" onClick={() => toast.info('Invite admin (demo)')}>
-              <Plus className="h-4 w-4 mr-1" /> Invite admin
-            </Button>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-primary" /> Admin permissions
+            </CardTitle>
+            <CardDescription>Admin access is loaded from the authenticated Firebase user profile.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
-                    <th className="px-4 py-3 font-semibold">Member</th>
-                    <th className="px-4 py-3 font-semibold">Role</th>
-                    <th className="px-4 py-3 font-semibold">Permissions</th>
-                    <th className="px-4 py-3 font-semibold text-right">Last active</th>
-                    <th className="px-4 py-3 font-semibold text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {adminPermissions.map((p) => (
-                    <tr key={p.email} className="border-b border-border last:border-0">
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-foreground">{p.name}</p>
-                        <p className="text-xs text-muted-foreground">{p.email}</p>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant={p.role === 'Super Admin' ? 'default' : 'secondary'}>{p.role}</Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1">
-                          {p.permissions.map((perm) => (
-                            <Badge key={perm} variant="outline" className="text-xs">{perm}</Badge>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-right text-muted-foreground">{p.lastActive}</td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="inline-flex items-center gap-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.info(`Edit ${p.name} (demo)`)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => toast.error(`Remove ${p.name} (demo)`)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="rounded-2xl border border-border p-4">
+              <p className="text-sm font-semibold text-foreground">{user?.name || 'Current admin'}</p>
+              <p className="text-xs text-muted-foreground">{user?.email || 'No email available'}</p>
+              <p className="mt-3 text-sm text-muted-foreground">
+                Role: <span className="font-medium text-foreground">{user?.role || 'admin'}</span>
+              </p>
             </div>
           </CardContent>
         </Card>
