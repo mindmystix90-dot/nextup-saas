@@ -19,10 +19,9 @@ import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { useRouter } from 'next/navigation';
 import { AdminRoute } from '@/components/auth/admin-route';
-import { adminNav } from '@/lib/data/admin';
+import { adminNav, adminNavGroups } from '@/config/admin-nav';
 import { getIcon } from '@/lib/icons';
 
-const GROUPS = ['Overview', 'Manage', 'Engage', 'Insights'] as const;
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -48,7 +47,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
       </Link>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
-        {GROUPS.map((group) => (
+        {adminNavGroups.map((group) => (
           <div key={group} className="space-y-1">
             <p className="px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{group}</p>
             {adminNav
@@ -123,7 +122,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
               <div className="relative hidden md:block w-72">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <input
-                  placeholder="Search admin…"
+                  placeholder="Search admin…" onFocus={() => router.push('/admin/search')}
                   className="h-10 w-full rounded-xl border border-input bg-background pl-10 pr-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 />
               </div>

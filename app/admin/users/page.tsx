@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Users as UsersIcon, Search, MoreHorizontal, Pencil, Trash2, Ban, KeyRound, Loader2, Eye } from 'lucide-react';
+import { Users as UsersIcon, Search, MoreHorizontal, Pencil, Trash2, Ban, KeyRound, Loader2, Eye, CheckCircle2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +21,16 @@ import type { Role, Membership, FirestoreProfile } from '@/types';
 
 const ROLE_OPTIONS: Role[] = ['superadmin', 'admin', 'instructor', 'student', 'affiliate', 'user'];
 const MEMBERSHIP_OPTIONS: Membership[] = ['starter', 'pro', 'lifetime'];
+
+function displayUserId(user: FirestoreProfile): string {
+  return user.userId || user.uid;
+}
+
+function searchable(value: unknown): string {
+  if (typeof value === 'string') return value.toLowerCase();
+  if (typeof value === 'number') return String(value).toLowerCase();
+  return '';
+}
 
 function membershipLabel(m: Membership): string {
   return m.charAt(0).toUpperCase() + m.slice(1);
@@ -53,10 +63,16 @@ export default function AdminUsersPage() {
 
   const filtered = useMemo(() => {
     return users.filter((u) => {
-      const matchQuery =
-        (u.name || '').toLowerCase().includes(query.toLowerCase()) ||
-        (u.email || '').toLowerCase().includes(query.toLowerCase()) ||
-        (u.uid || '').toLowerCase().includes(query.toLowerCase());
+      const normalizedQuery = query.toLowerCase();
+      const matchQuery = [
+        displayUserId(u),
+        u.uid,
+        u.email,
+        u.phone,
+        u.name,
+        u.referralCode,
+        u.paymentId,
+      ].some((value) => searchable(value).includes(normalizedQuery));
       const matchRole = roleFilter === 'all' || u.role === roleFilter;
       const matchMembership = membershipFilter === 'all' || u.membership === membershipFilter;
       const matchStatus = statusFilter === 'all' || (statusFilter === 'suspended' ? u.suspended : !u.suspended);
@@ -128,7 +144,7 @@ export default function AdminUsersPage() {
             <div className="relative w-full lg:max-w-xs">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search name, email, UID…"
+                placeholder="Search User ID, email, phone, name, referral code, payment ID…"
                 className="pl-10"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -174,13 +190,15 @@ export default function AdminUsersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead className="hidden md:table-cell">UID</TableHead>
+                  <TableHead>User</TableHead>
+                  <TableHead>Email / Phone</TableHead>
+                  <TableHead className="hidden md:table-cell">User ID</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead>Membership</TableHead>
+                  <TableHead>Package</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="hidden sm:table-cell text-right">Created</TableHead>
+                  <TableHead className="hidden lg:table-cell">Affiliate</TableHead>
+                  <TableHead className="hidden lg:table-cell">Sales Partner</TableHead>
+                  <TableHead className="hidden sm:table-cell text-right">Joined</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -196,11 +214,16 @@ export default function AdminUsersPage() {
                         <p className="font-medium text-foreground">{u.name || 'Unnamed'}</p>
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{u.email || '—'}</TableCell>
-                    <TableCell className="hidden md:table-cell text-xs text-muted-foreground font-mono">{u.uid.slice(0, 12)}…</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      <div>{u.email || '—'}</div>
+                      <div className="text-xs">{u.phone || 'No phone'}</div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-xs text-muted-foreground font-mono">{displayUserId(u)}</TableCell>
                     <TableCell><Badge variant={u.role === 'admin' || u.role === 'superadmin' ? 'default' : 'outline'} className="capitalize">{u.role || 'user'}</Badge></TableCell>
                     <TableCell><Badge variant={u.membership === 'lifetime' ? 'default' : 'secondary'} className="capitalize">{membershipLabel(u.membership || 'starter')}</Badge></TableCell>
                     <TableCell><StatusBadge status={u.suspended ? 'Suspended' : 'Active'} /></TableCell>
+                    <TableCell className="hidden lg:table-cell"><StatusBadge status={u.affiliateStatus || (u.affiliateEnabled ? 'Enabled' : 'Disabled')} /></TableCell>
+                    <TableCell className="hidden lg:table-cell"><StatusBadge status={u.salesPartnerStatus || 'Disabled'} /></TableCell>
                     <TableCell className="hidden sm:table-cell text-right text-muted-foreground text-sm">{formatDate(u.createdAt)}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
@@ -212,7 +235,7 @@ export default function AdminUsersPage() {
                           <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => setViewUser(u)}><Eye className="mr-2 h-4 w-4" /> View profile</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openEdit(u)}><Pencil className="mr-2 h-4 w-4" /> Edit profile</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => toggleSuspend(u)}><Ban className="mr-2 h-4 w-4" /> {u.suspended ? 'Reactivate' : 'Suspend'}</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => toggleSuspend(u)}>{u.suspended ? <CheckCircle2 className="mr-2 h-4 w-4" /> : <Ban className="mr-2 h-4 w-4" />} {u.suspended ? 'Activate' : 'Suspend'}</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => resetPassword(u)}><KeyRound className="mr-2 h-4 w-4" /> Reset password</DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => setDeleteTarget(u)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete user</DropdownMenuItem>
@@ -244,13 +267,20 @@ export default function AdminUsersPage() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3 pt-2">
-                <div><p className="text-xs text-muted-foreground">UID</p><p className="font-mono text-xs">{viewUser.uid}</p></div>
+                <div><p className="text-xs text-muted-foreground">User ID</p><p className="font-mono text-xs">{displayUserId(viewUser)}</p></div>
+                <div><p className="text-xs text-muted-foreground">Firebase UID</p><p className="font-mono text-xs">{viewUser.uid}</p></div>
                 <div><p className="text-xs text-muted-foreground">Role</p><p className="capitalize">{viewUser.role || 'user'}</p></div>
-                <div><p className="text-xs text-muted-foreground">Membership</p><p className="capitalize">{membershipLabel(viewUser.membership || 'starter')}</p></div>
+                <div><p className="text-xs text-muted-foreground">Package</p><p className="capitalize">{membershipLabel(viewUser.membership || 'starter')}</p></div>
                 <div><p className="text-xs text-muted-foreground">Status</p><p>{viewUser.suspended ? 'Suspended' : 'Active'}</p></div>
                 <div><p className="text-xs text-muted-foreground">Phone</p><p>{viewUser.phone || '—'}</p></div>
-                <div><p className="text-xs text-muted-foreground">Created</p><p>{formatDate(viewUser.createdAt)}</p></div>
+                <div><p className="text-xs text-muted-foreground">Joined Date</p><p>{formatDate(viewUser.createdAt)}</p></div>
+                <div><p className="text-xs text-muted-foreground">Wallet</p><p>₹{viewUser.walletBalance ?? 0}</p></div>
+                <div><p className="text-xs text-muted-foreground">Orders</p><p>{viewUser.ordersCount ?? 0}</p></div>
+                <div><p className="text-xs text-muted-foreground">Enrollments</p><p>{viewUser.enrollmentsCount ?? viewUser.accessibleCourses?.length ?? 0}</p></div>
+                <div><p className="text-xs text-muted-foreground">Affiliate Status</p><p>{viewUser.affiliateStatus || (viewUser.affiliateEnabled ? 'Enabled' : 'Disabled')}</p></div>
+                <div><p className="text-xs text-muted-foreground">Sales Partner Status</p><p>{viewUser.salesPartnerStatus || 'Disabled'}</p></div>
                 <div className="col-span-2"><p className="text-xs text-muted-foreground">Address</p><p>{viewUser.address || '—'}</p></div>
+                <div className="col-span-2"><p className="text-xs text-muted-foreground">Admin Notes</p><p>{viewUser.adminNotes || '—'}</p></div>
               </div>
             </div>
           )}
@@ -263,7 +293,7 @@ export default function AdminUsersPage() {
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>User management</DialogTitle>
-            <DialogDescription>Complete control center for {editUser?.email}</DialogDescription>
+            <DialogDescription>Upgrade, downgrade, suspend, activate, reset password, and manage profile details for {editUser?.email}</DialogDescription>
           </DialogHeader>
           {editUser && (
             <UserControlCenter

@@ -26,6 +26,7 @@ export interface AuthResult {
 
 export interface FirestoreProfile {
   uid: string;
+  userId?: string;
   name: string;
   email: string;
   phone: string;
@@ -41,6 +42,14 @@ export interface FirestoreProfile {
   accessibleCourses?: string[];
   completedCourses?: string[];
   affiliateEnabled?: boolean;
+  affiliateStatus?: string;
+  salesPartnerStatus?: string;
+  referralCode?: string;
+  paymentId?: string;
+  walletBalance?: number;
+  ordersCount?: number;
+  enrollmentsCount?: number;
+  adminNotes?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -193,6 +202,17 @@ export interface PricingPlan {
   period: string;
   description: string;
   features: string[];
+  duration?: string;
+  courseIds?: string[];
+  communityAccess?: boolean;
+  liveClasses?: boolean;
+  certificates?: boolean;
+  downloads?: boolean;
+  affiliateEnabled?: boolean;
+  salesPartnerEnabled?: boolean;
+  aiTools?: boolean;
+  visible?: boolean;
+  priority?: number;
   cta: string;
   featured: boolean;
   badge: string;

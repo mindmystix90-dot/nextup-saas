@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ShieldCheck, Users, BookOpen, Award, Wallet, Eye, Network, Activity, ArrowUpRight } from 'lucide-react';
+import { ShieldCheck, Users, BookOpen, Award, Wallet, Network, Activity, ArrowUpRight, MessageSquare, Video, LifeBuoy, Handshake, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -40,12 +40,20 @@ export default function AdminDashboardPage() {
   }, []);
 
   const statCards = [
+    { label: 'Total Revenue', value: stats?.totalRevenue ?? 0, icon: Wallet, suffix: '', isCurrency: true },
+    { label: 'Monthly Revenue', value: stats?.monthlyRevenue ?? 0, icon: TrendingUp, suffix: '', isCurrency: true },
     { label: 'Total Users', value: stats?.users ?? 0, icon: Users, suffix: '' },
-    { label: 'Courses', value: stats?.courses ?? 0, icon: BookOpen, suffix: '' },
+    { label: 'Active Users', value: stats?.activeUsers ?? 0, icon: Users, suffix: '' },
+    { label: 'New Users', value: stats?.newUsers ?? 0, icon: Users, suffix: '' },
+    { label: 'Course Sales', value: stats?.courseSales ?? 0, icon: BookOpen, suffix: '', isCurrency: true },
+    { label: 'Affiliate Sales', value: stats?.affiliateSales ?? 0, icon: Network, suffix: '', isCurrency: true },
+    { label: 'Pending Payouts', value: stats?.pendingPayouts ?? 0, icon: Wallet, suffix: '', isCurrency: true },
+    { label: 'Sales Partner Revenue', value: stats?.salesPartnerRevenue ?? 0, icon: Handshake, suffix: '', isCurrency: true },
+    { label: 'Active Courses', value: stats?.courses ?? 0, icon: BookOpen, suffix: '' },
+    { label: 'Community Posts', value: stats?.communityPosts ?? 0, icon: MessageSquare, suffix: '' },
+    { label: 'Live Classes', value: stats?.liveClasses ?? 0, icon: Video, suffix: '' },
+    { label: 'Support Tickets', value: stats?.supportTickets ?? 0, icon: LifeBuoy, suffix: '' },
     { label: 'Certificates', value: stats?.certificates ?? 0, icon: Award, suffix: '' },
-    { label: 'Revenue', value: stats?.revenue ?? 0, icon: Wallet, suffix: '', isCurrency: true },
-    { label: 'Visitors', value: stats?.visitors ?? 0, icon: Eye, suffix: '' },
-    { label: 'Affiliates', value: stats?.affiliates ?? 0, icon: Network, suffix: '' },
   ];
 
   function formatDate(iso: string): string {
@@ -65,14 +73,14 @@ export default function AdminDashboardPage() {
         subtitle="Platform metrics, activity and growth at a glance."
         actions={
           <>
-            <Button variant="outline" size="sm">Export report</Button>
-            <Button size="sm" className="bg-brand-gradient font-semibold">View analytics</Button>
+            <Button asChild variant="outline" size="sm"><a href="/admin/reports">Export report</a></Button>
+            <Button asChild size="sm" className="bg-brand-gradient font-semibold"><a href="/admin/analytics">View analytics</a></Button>
           </>
         }
       />
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {statCards.map((s) => {
           const Icon = s.icon;
           return (
@@ -96,6 +104,36 @@ export default function AdminDashboardPage() {
           );
         })}
       </div>
+
+
+
+      <Card className="card-premium">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-primary" /> Reporting snapshots
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="grid gap-3 md:grid-cols-5">{[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-20 w-full" />)}</div>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-5">
+              {[
+                ['Revenue', stats?.totalRevenue ?? 0, true],
+                ['User Growth', stats?.newUsers ?? 0, false],
+                ['Course Sales', stats?.courseSales ?? 0, true],
+                ['Affiliate Performance', stats?.affiliateSales ?? 0, true],
+                ['Sales Performance', stats?.salesPartnerRevenue ?? 0, true],
+              ].map(([label, value, currency]) => (
+                <div key={String(label)} className="rounded-2xl border border-border p-4">
+                  <p className="text-xs text-muted-foreground">{label}</p>
+                  <p className="mt-2 font-display text-xl font-bold">{currency ? `₹${formatINR(Number(value))}` : formatINR(Number(value))}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Recent signups + Recent payments */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
@@ -165,7 +203,7 @@ export default function AdminDashboardPage() {
               <Wallet className="h-5 w-5 text-primary" /> Recent payments
             </CardTitle>
             <Button asChild variant="outline" size="sm">
-              <a href="/admin/wallet">View all</a>
+              <a href="/admin/payments">View all</a>
             </Button>
           </CardHeader>
           <CardContent>

@@ -3,11 +3,20 @@ import { getFirestoreDb, firebaseReady } from '@/lib/firebase';
 import type { Payment } from '@/types';
 
 export interface DashboardStats {
+  totalRevenue: number;
+  monthlyRevenue: number;
   users: number;
+  activeUsers: number;
+  newUsers: number;
+  courseSales: number;
+  affiliateSales: number;
+  pendingPayouts: number;
+  salesPartnerRevenue: number;
   courses: number;
+  communityPosts: number;
+  liveClasses: number;
+  supportTickets: number;
   certificates: number;
-  revenue: number;
-  visitors: number;
   affiliates: number;
 }
 
@@ -34,8 +43,17 @@ const EMPTY_STATS: DashboardStats = {
   users: 0,
   courses: 0,
   certificates: 0,
-  revenue: 0,
-  visitors: 0,
+  totalRevenue: 0,
+  monthlyRevenue: 0,
+  activeUsers: 0,
+  newUsers: 0,
+  courseSales: 0,
+  affiliateSales: 0,
+  pendingPayouts: 0,
+  salesPartnerRevenue: 0,
+  communityPosts: 0,
+  liveClasses: 0,
+  supportTickets: 0,
   affiliates: 0,
 };
 
@@ -48,24 +66,84 @@ async function countCollection(name: string): Promise<number> {
 
 export async function fetchDashboardStats(): Promise<DashboardStats> {
   if (!firebaseReady) return EMPTY_STATS;
-  const [users, courses, certificates, affiliates] = await Promise.all([
+  const [users, courses, certificates, affiliates, communityPosts, liveClasses, supportTickets] = await Promise.all([
     countCollection('users'),
     countCollection('courses'),
     countCollection('certificates'),
     countCollection('affiliates'),
+    countCollection('community_posts'),
+    countCollection('live_classes'),
+    countCollection('support_tickets'),
   ]);
-  let revenue = 0;
+
+  let totalRevenue = 0;
+  let monthlyRevenue = 0;
+  let courseSales = 0;
+  let affiliateSales = 0;
+  let pendingPayouts = 0;
+  let salesPartnerRevenue = 0;
+  let activeUsers = 0;
+  let newUsers = 0;
+
+  const monthStart = new Date();
+  monthStart.setUTCDate(1);
+  monthStart.setUTCHours(0, 0, 0, 0);
+  const recentStart = new Date();
+  recentStart.setUTCDate(recentStart.getUTCDate() - 30);
+
   try {
     const db = getFirestoreDb();
-    const snap = await getDocs(collection(db, 'payments'));
-    snap.forEach((d) => {
+    const [paymentSnap, userSnap, payoutSnap] = await Promise.all([
+      getDocs(collection(db, 'payments')),
+      getDocs(collection(db, 'users')),
+      getDocs(collection(db, 'withdrawals')),
+    ]);
+
+    paymentSnap.forEach((d) => {
+      const data = d.data() as { amount?: number; status?: string; type?: string; source?: string; date?: string; createdAt?: string };
+      const amount = typeof data.amount === 'number' ? data.amount : 0;
+      const status = (data.status || '').toLowerCase();
+      if (status !== 'completed') return;
+      totalRevenue += amount;
+      const dateValue = data.date || data.createdAt;
+      if (dateValue && new Date(dateValue) >= monthStart) monthlyRevenue += amount;
+      if (data.type === 'course') courseSales += amount;
+      if (data.source === 'affiliate') affiliateSales += amount;
+      if (data.source === 'sales_partner') salesPartnerRevenue += amount;
+    });
+
+    userSnap.forEach((d) => {
+      const data = d.data() as { suspended?: boolean; createdAt?: string };
+      if (!data.suspended) activeUsers += 1;
+      if (data.createdAt && new Date(data.createdAt) >= recentStart) newUsers += 1;
+    });
+
+    payoutSnap.forEach((d) => {
       const data = d.data() as { amount?: number; status?: string };
-      if (data.status === 'Completed' && typeof data.amount === 'number') revenue += data.amount;
+      const status = (data.status || '').toLowerCase();
+      if (status === 'pending' && typeof data.amount === 'number') pendingPayouts += data.amount;
     });
   } catch {
-    // payments collection may not exist yet
+    // optional reporting collections may not exist yet
   }
-  return { users, courses, certificates, revenue, visitors: 0, affiliates };
+
+  return {
+    totalRevenue,
+    monthlyRevenue,
+    users,
+    activeUsers,
+    newUsers,
+    courseSales,
+    affiliateSales,
+    pendingPayouts,
+    salesPartnerRevenue,
+    courses,
+    communityPosts,
+    liveClasses,
+    supportTickets,
+    certificates,
+    affiliates,
+  };
 }
 
 export async function fetchRecentSignups(limit = 5): Promise<RecentSignup[]> {

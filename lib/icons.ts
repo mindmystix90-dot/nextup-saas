@@ -47,6 +47,8 @@ import {
   FileText,
   BarChart3,
   LayoutDashboard,
+  Bell,
+  BadgePercent,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -99,6 +101,8 @@ const iconMap: Record<string, LucideIcon> = {
   FileText,
   BarChart3,
   LayoutDashboard,
+  Bell,
+  BadgePercent,
 };
 
 export function getIcon(name: string): LucideIcon {
