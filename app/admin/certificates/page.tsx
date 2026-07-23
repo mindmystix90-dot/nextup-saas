@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Award, Search, Eye, ShieldCheck, Ban, Plus } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Award, Search, Eye, ShieldCheck, Ban, Plus, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,25 +21,35 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import { AdminPageHeader, StatusBadge } from '@/components/admin/admin-page-header';
-import { adminCertificates } from '@/lib/data/admin';
+import { fetchCertificates, updateCertificateStatus } from '@/services/certificates.service';
+import type { Certificate } from '@/types';
 import { getIcon } from '@/lib/icons';
 import { toast } from 'sonner';
 
 export default function AdminCertificatesPage() {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('all');
-  const [preview, setPreview] = useState<(typeof adminCertificates)[number] | null>(null);
+  const [certificatesList, setCertificatesList] = useState<Certificate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [preview, setPreview] = useState<Certificate | null>(null);
+
+  async function loadCertificates() {
+    setLoading(true);
+    try {
+      const data = await fetchCertificates();
+      setCertificatesList(data);
+    } catch {
+      toast.error('Failed to load certificates');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { loadCertificates(); }, []);
 
   const filtered = useMemo(() => {
-    return adminCertificates.filter((c) => {
+    return certificatesList.filter((c) => {
       const matchQuery =
         c.id.toLowerCase().includes(query.toLowerCase()) ||
         c.recipientName.toLowerCase().includes(query.toLowerCase()) ||
@@ -47,7 +57,7 @@ export default function AdminCertificatesPage() {
       const matchStatus = status === 'all' || c.status === status;
       return matchQuery && matchStatus;
     });
-  }, [query, status]);
+  }, [certificatesList, query, status]);
 
   return (
     <div className="space-y-6">
@@ -109,7 +119,7 @@ export default function AdminCertificatesPage() {
                       <p className="text-xs text-muted-foreground">{c.instructor}</p>
                     </TableCell>
                     <TableCell><Badge variant="secondary">{c.grade}</Badge></TableCell>
-                    <TableCell><StatusBadge status={c.status} /></TableCell>
+                    <TableCell><StatusBadge status={c.status || 'issued'} /></TableCell>
                     <TableCell className="text-right">
                       <div className="inline-flex items-center gap-1">
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPreview(c)}>
@@ -166,7 +176,7 @@ export default function AdminCertificatesPage() {
   );
 }
 
-function CertificatePreview({ cert }: { cert: (typeof adminCertificates)[number] }) {
+function CertificatePreview({ cert }: { cert: Certificate }) {
   const Icon = getIcon(cert.icon);
   return (
     <div className={`rounded-2xl bg-gradient-to-br ${cert.gradient} p-6 text-white shadow-glow`}>

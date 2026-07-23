@@ -97,8 +97,10 @@ export default function LearningPage() {
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">{c.instructor} · {c.lessons} lessons · {c.duration}</p>
                   </div>
-                  <Button size="sm" className="bg-brand-gradient font-semibold shrink-0">
-                    <PlayCircle className="mr-1.5 h-4 w-4" /> Continue
+                  <Button asChild size="sm" className="bg-brand-gradient font-semibold shrink-0">
+                    <Link href={`/dashboard/learning/${c.id}`}>
+                      <PlayCircle className="mr-1.5 h-4 w-4" /> Continue Learning
+                    </Link>
                   </Button>
                 </CardContent>
               </Card>

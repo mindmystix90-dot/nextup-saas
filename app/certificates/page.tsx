@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Award, Download, ShieldCheck, Search, CheckCircle2, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Award, Download, ShieldCheck, Search, CheckCircle2, X, Loader2 } from 'lucide-react';
 import { Navbar } from '@/components/site/navbar';
 import { Footer } from '@/components/site/footer';
 import { Reveal } from '@/components/site/reveal';
@@ -12,25 +12,48 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { getIcon } from '@/lib/icons';
-import { certificates, verifiedCertificates } from '@/lib/data/certificates';
+import { fetchCertificates, fetchCertificateById } from '@/services/certificates.service';
 import type { Certificate } from '@/types';
 import { toast } from 'sonner';
 
 export default function CertificatesPage() {
   const [query, setQuery] = useState('');
   const [verifyId, setVerifyId] = useState('');
-  const [verifyResult, setVerifyResult] = useState<Certificate | typeof verifiedCertificates[number] | null | 'not-found'>(null);
+  const [verifyResult, setVerifyResult] = useState<Certificate | null | 'not-found'>(null);
   const [open, setOpen] = useState(false);
+  const [certificatesList, setCertificatesList] = useState<Certificate[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = certificates.filter(
+  async function loadCertificates() {
+    setLoading(true);
+    try {
+      const data = await fetchCertificates();
+      setCertificatesList(data);
+    } catch {
+      toast.error('Failed to load certificates');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { loadCertificates(); }, []);
+
+  const filtered = certificatesList.filter(
     (c) =>
       c.courseName.toLowerCase().includes(query.toLowerCase()) ||
       c.recipientName.toLowerCase().includes(query.toLowerCase())
   );
 
-  function handleVerify() {
-    const found = verifiedCertificates.find((c) => c.id.toLowerCase() === verifyId.trim().toLowerCase());
-    setVerifyResult(found || 'not-found');
+  async function handleVerify() {
+    if (!verifyId.trim()) return;
+    const foundLocal = certificatesList.find((c) => c.id.toLowerCase() === verifyId.trim().toLowerCase());
+    if (foundLocal) {
+      setVerifyResult(foundLocal);
+      setOpen(true);
+      return;
+    }
+    const foundRemote = await fetchCertificateById(verifyId.trim());
+    setVerifyResult(foundRemote || 'not-found');
     setOpen(true);
   }
 
@@ -95,14 +118,16 @@ export default function CertificatesPage() {
 
       {/* Grid */}
       <section className="container section-padding">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+        ) : filtered.length === 0 ? (
           <Card className="card-premium">
             <CardContent className="py-16 text-center">
               <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary text-muted-foreground">
                 <Award className="h-7 w-7" />
               </span>
               <h2 className="mt-4 font-display text-lg font-semibold">No certificates found</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Try a different search.</p>
+              <p className="mt-1 text-sm text-muted-foreground">Try a different search or earn a new certificate.</p>
             </CardContent>
           </Card>
         ) : (
@@ -152,35 +177,37 @@ export default function CertificatesPage() {
         )}
 
         {/* Recent verified */}
-        <Reveal>
-          <div className="mt-14">
-            <SectionHeading align="left" eyebrow="Recently verified" title="Certificates in the wild" />
-            <Card className="card-premium mt-8 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
-                      <th className="px-6 py-4 font-semibold">Recipient</th>
-                      <th className="px-6 py-4 font-semibold">Course</th>
-                      <th className="px-6 py-4 font-semibold">Certificate ID</th>
-                      <th className="px-6 py-4 font-semibold text-right">Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {verifiedCertificates.map((c) => (
-                      <tr key={c.id} className="border-b border-border last:border-0 hover:bg-secondary/40 transition-colors">
-                        <td className="px-6 py-4 font-medium text-foreground">{c.recipientName}</td>
-                        <td className="px-6 py-4 text-muted-foreground">{c.courseName}</td>
-                        <td className="px-6 py-4 font-mono text-xs">{c.id}</td>
-                        <td className="px-6 py-4 text-right text-muted-foreground">{c.date}</td>
+        {certificatesList.length > 0 && (
+          <Reveal>
+            <div className="mt-14">
+              <SectionHeading align="left" eyebrow="Recently verified" title="Certificates in the wild" />
+              <Card className="card-premium mt-8 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
+                        <th className="px-6 py-4 font-semibold">Recipient</th>
+                        <th className="px-6 py-4 font-semibold">Course</th>
+                        <th className="px-6 py-4 font-semibold">Certificate ID</th>
+                        <th className="px-6 py-4 font-semibold text-right">Date</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-          </div>
-        </Reveal>
+                    </thead>
+                    <tbody>
+                      {certificatesList.map((c) => (
+                        <tr key={c.id} className="border-b border-border last:border-0 hover:bg-secondary/40 transition-colors">
+                          <td className="px-6 py-4 font-medium text-foreground">{c.recipientName}</td>
+                          <td className="px-6 py-4 text-muted-foreground">{c.courseName}</td>
+                          <td className="px-6 py-4 font-mono text-xs">{c.id}</td>
+                          <td className="px-6 py-4 text-right text-muted-foreground">{c.issueDate}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </div>
+          </Reveal>
+        )}
       </section>
 
       {/* Verify dialog */}
@@ -206,7 +233,7 @@ export default function CertificatesPage() {
                 <X className="h-6 w-6" />
               </span>
               <p className="mt-3 font-semibold">Certificate not found</p>
-              <p className="mt-1 text-sm text-muted-foreground">No certificate matches ID "{verifyId}".</p>
+              <p className="mt-1 text-sm text-muted-foreground">No certificate matches ID &quot;{verifyId}&quot;.</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -217,7 +244,7 @@ export default function CertificatesPage() {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between"><span className="text-muted-foreground">Recipient</span><span className="font-medium">{verifyResult.recipientName}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Course</span><span className="font-medium text-right">{verifyResult.courseName}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Issue date</span><span className="font-medium">{'date' in verifyResult ? verifyResult.date : verifyResult.issueDate}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Issue date</span><span className="font-medium">{'date' in verifyResult ? String(verifyResult.date) : String(verifyResult.issueDate)}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Certificate ID</span><span className="font-mono text-xs">{verifyResult.id}</span></div>
               </div>
             </div>

@@ -29,7 +29,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { AdminPageHeader, StatusBadge } from '@/components/admin/admin-page-header';
-import { adminPermissions } from '@/lib/data/admin';
 import { useAuth } from '@/hooks/use-auth';
 import { toast } from 'sonner';
 
@@ -239,35 +238,30 @@ export default function AdminSettingsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {adminPermissions.map((p) => (
-                    <tr key={p.email} className="border-b border-border last:border-0">
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-foreground">{p.name}</p>
-                        <p className="text-xs text-muted-foreground">{p.email}</p>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant={p.role === 'Super Admin' ? 'default' : 'secondary'}>{p.role}</Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1">
-                          {p.permissions.map((perm) => (
-                            <Badge key={perm} variant="outline" className="text-xs">{perm}</Badge>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-right text-muted-foreground">{p.lastActive}</td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="inline-flex items-center gap-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.info(`Edit ${p.name} (demo)`)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => toast.error(`Remove ${p.name} (demo)`)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  <tr className="border-b border-border last:border-0">
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-foreground">{user?.name || 'NextUp Admin'}</p>
+                      <p className="text-xs text-muted-foreground">{user?.email || 'admin@nextup.in'}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge variant="default">Super Admin</Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1">
+                        {['All Access', 'User Management', 'Billing', 'CMS', 'Settings'].map((perm) => (
+                          <Badge key={perm} variant="outline" className="text-xs">{perm}</Badge>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-right text-muted-foreground">Just now</td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="inline-flex items-center gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.info('Current active admin account')}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>

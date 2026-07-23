@@ -58,24 +58,61 @@ export interface CourseProgress {
 export interface Certificate {
   id: string;
   recipientName: string;
+  recipientUid?: string;
   courseName: string;
+  courseId?: string;
   instructor: string;
   issueDate: string;
   grade: string;
   gradient: string;
   icon: string;
+  status?: 'issued' | 'revoked' | 'active';
+  certificateUrl?: string;
 }
 
 export interface Discussion {
-  name: string;
-  role: string;
-  avatar: string;
-  topic: string;
+  id?: string;
+  name?: string;
+  role?: string;
+  avatar?: string;
+  topic?: string;
   category: string;
   replies: number;
   likes: number;
-  time: string;
+  time?: string;
+  timeAgo?: string;
   trending?: boolean;
+  title?: string;
+  content?: string;
+  authorName?: string;
+  authorAvatar?: string;
+  authorUid?: string;
+  isPinned?: boolean;
+  repliesCount?: number;
+  likesCount?: number;
+  createdAt?: string;
+}
+
+export interface MentorPost {
+  id?: string;
+  title: string;
+  content: string;
+  excerpt?: string;
+  authorName: string;
+  authorAvatar?: string;
+  likes?: number;
+  comments?: number;
+  createdAt?: string;
+}
+
+export interface StudentQuestion {
+  id?: string;
+  question: string;
+  courseTitle: string;
+  authorName: string;
+  authorAvatar?: string;
+  replies?: number;
+  createdAt?: string;
 }
 
 export interface LiveClass {
@@ -90,7 +127,7 @@ export interface LiveClass {
 
 // ===== Wallet & Payments =====
 
-export type TransactionType = 'credit' | 'debit' | 'withdrawal' | 'referral' | 'bonus' | 'purchase' | 'refund';
+export type TransactionType = 'credit' | 'debit' | 'withdrawal' | 'referral' | 'referral_commission' | 'bonus' | 'purchase' | 'refund';
 export type TransactionStatus = 'completed' | 'pending' | 'failed';
 export type KycStatus = 'pending' | 'verified' | 'rejected';
 export type WithdrawalMethod = 'upi' | 'bank';
@@ -113,6 +150,7 @@ export interface WalletTransaction {
   amount: number;
   status: TransactionStatus;
   method?: string;
+  referenceId?: string;
   date: string;
 }
 
@@ -229,3 +267,220 @@ export interface Referral {
   commission: number;
   date: string;
 }
+
+// ===== Coupons =====
+
+export interface Coupon {
+  id: string;
+  code: string;
+  discountType: 'percentage' | 'fixed';
+  discountValue: number;
+  validUntil: string;
+  usageLimit: number;
+  usedCount: number;
+  active: boolean;
+  applicablePlan?: string;
+  createdAt?: string;
+}
+
+// ===== Live Classes =====
+
+export interface LiveClassSession {
+  id: string;
+  title: string;
+  instructor: string;
+  scheduledAt: string;
+  durationMinutes: number;
+  meetingUrl: string;
+  status: 'Scheduled' | 'Live' | 'Ended' | 'Cancelled';
+  enrolledCount: number;
+  category: string;
+  description?: string;
+  recordingUrl?: string;
+  createdAt?: string;
+}
+
+// ===== Support Tickets =====
+
+export interface SupportTicketReply {
+  id: string;
+  sender: 'user' | 'support' | 'admin';
+  senderName?: string;
+  message: string;
+  createdAt: string;
+}
+
+export interface SupportTicket {
+  id: string;
+  uid: string;
+  userName: string;
+  userEmail: string;
+  subject: string;
+  category: 'General' | 'Billing' | 'Courses' | 'Technical' | 'Affiliate';
+  priority: 'Low' | 'Medium' | 'High' | 'Urgent';
+  status: 'Open' | 'In Progress' | 'Resolved' | 'Closed';
+  createdAt: string;
+  updatedAt: string;
+  replies?: SupportTicketReply[];
+}
+
+// ===== Notifications =====
+
+export interface NotificationItem {
+  id: string;
+  title: string;
+  message: string;
+  targetRole: 'all' | 'student' | 'affiliate' | 'instructor' | 'admin';
+  type: 'info' | 'success' | 'warning' | 'alert';
+  createdAt: string;
+  sentBy?: string;
+  readCount?: number;
+}
+
+// ===== Sales Partners =====
+
+export interface SalesPartner {
+  id: string;
+  uid?: string;
+  companyName: string;
+  contactPerson: string;
+  email: string;
+  phone: string;
+  tier: 'Silver' | 'Gold' | 'Platinum' | 'Diamond';
+  commissionRate: number;
+  totalSales: number;
+  totalCommission: number;
+  status: 'Active' | 'Pending' | 'Suspended';
+  createdAt: string;
+}
+
+// ===== Commerce (Orders, Payments, Invoices) =====
+
+export type OrderStatus = 'completed' | 'pending' | 'failed' | 'refunded' | 'cancelled';
+
+export interface Order {
+  id: string; // ORD-YYMMDD-XXXX
+  uid: string;
+  userName: string;
+  userEmail: string;
+  packageId?: string;
+  packageName: string;
+  courseId?: string;
+  amount: number;
+  discountAmount?: number;
+  taxAmount?: number;
+  totalAmount: number;
+  status: OrderStatus;
+  paymentId?: string;
+  invoiceId?: string;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
+  paymentMethod?: string;
+  paymentProofRef?: string;
+  paymentProofNotes?: string;
+  rejectionReason?: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  rejectedBy?: string;
+  couponCode?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface Invoice {
+  id: string; // INV-YYMMDD-XXXX
+  orderId: string;
+  paymentId: string;
+  uid: string;
+  userName: string;
+  userEmail: string;
+  itemName: string;
+  amount: number;
+  taxAmount: number;
+  totalAmount: number;
+  status: 'paid' | 'pending' | 'void' | 'refunded';
+  createdAt: string;
+}
+
+// ===== Learning Platform =====
+
+export interface Lesson {
+  id: string;
+  courseId: string;
+  title: string;
+  description?: string;
+  duration: string;
+  type: 'video' | 'pdf' | 'download' | 'quiz';
+  videoUrl?: string;
+  pdfUrl?: string;
+  downloadUrl?: string;
+  downloadName?: string;
+  sortOrder: number;
+  isFreePreview?: boolean;
+}
+
+export interface StudentBookmark {
+  id: string;
+  uid: string;
+  courseId: string;
+  lessonId: string;
+  lessonTitle: string;
+  timestampSeconds?: number;
+  note?: string;
+  createdAt: string;
+}
+
+export interface StudentNote {
+  id: string;
+  uid: string;
+  courseId: string;
+  lessonId: string;
+  lessonTitle: string;
+  content: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface LessonDiscussion {
+  id: string;
+  courseId: string;
+  lessonId: string;
+  uid: string;
+  authorName: string;
+  authorAvatar?: string;
+  message: string;
+  createdAt: string;
+  replies?: {
+    id: string;
+    uid: string;
+    authorName: string;
+    authorAvatar?: string;
+    message: string;
+    createdAt: string;
+  }[];
+}
+
+export interface ActivityLog {
+  id: string;
+  uid: string;
+  userName?: string;
+  userEmail?: string;
+  type: 'login' | 'purchase' | 'lesson_completed' | 'course_completed' | 'certificate_issued' | 'withdrawal_requested' | 'profile_updated';
+  message: string;
+  createdAt: string;
+  metadata?: Record<string, unknown>;
+}
+
+// ===== Roles & Permissions =====
+
+export interface RolePermission {
+  id: string;
+  role: Role;
+  displayName: string;
+  description: string;
+  permissions: string[];
+  userCount?: number;
+  updatedAt?: string;
+}
+
+

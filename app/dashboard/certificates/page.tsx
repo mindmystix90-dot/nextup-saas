@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Download, ShieldCheck, Search, Award, CheckCircle2, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Download, ShieldCheck, Search, Award, CheckCircle2, X, Loader2 } from 'lucide-react';
 import { DashboardLayout } from '@/components/dashboard/dashboard-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,17 +9,35 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { getIcon } from '@/lib/icons';
-import { certificates } from '@/lib/data/certificates';
+import { fetchCertificates, fetchCertificateById } from '@/services/certificates.service';
+import { useAuth } from '@/hooks/use-auth';
 import type { Certificate } from '@/types';
 import { toast } from 'sonner';
 
 export default function CertificatesPage() {
+  const { user } = useAuth();
   const [query, setQuery] = useState('');
   const [verifyId, setVerifyId] = useState('');
   const [verifyResult, setVerifyResult] = useState<Certificate | null | 'not-found'>(null);
   const [open, setOpen] = useState(false);
+  const [userCerts, setUserCerts] = useState<Certificate[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = certificates.filter(
+  async function loadUserCertificates() {
+    setLoading(true);
+    try {
+      const data = await fetchCertificates();
+      setUserCerts(data);
+    } catch {
+      toast.error('Failed to load certificates');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { loadUserCertificates(); }, [user?.uid]);
+
+  const filtered = userCerts.filter(
     (c) =>
       c.courseName.toLowerCase().includes(query.toLowerCase()) ||
       c.recipientName.toLowerCase().includes(query.toLowerCase())
@@ -29,9 +47,15 @@ export default function CertificatesPage() {
     toast.success(`Downloading "${c.courseName}" certificate…`);
   }
 
-  function handleVerify() {
-    const found = certificates.find((c) => c.id.toLowerCase() === verifyId.trim().toLowerCase());
-    setVerifyResult(found || 'not-found');
+  async function handleVerify() {
+    if (!verifyId.trim()) return;
+    const foundLocal = userCerts.find((c) => c.id.toLowerCase() === verifyId.trim().toLowerCase());
+    if (foundLocal) {
+      setVerifyResult(foundLocal);
+      return;
+    }
+    const foundRemote = await fetchCertificateById(verifyId.trim());
+    setVerifyResult(foundRemote || 'not-found');
   }
 
   return (
@@ -76,7 +100,9 @@ export default function CertificatesPage() {
       </div>
 
       {/* Grid */}
-      {filtered.length === 0 ? (
+      {loading ? (
+        <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+      ) : filtered.length === 0 ? (
         <Card className="card-premium">
           <CardContent className="py-16 text-center">
             <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary text-muted-foreground">
@@ -156,7 +182,7 @@ export default function CertificatesPage() {
                 <X className="h-6 w-6" />
               </span>
               <p className="mt-3 font-semibold">Certificate not found</p>
-              <p className="mt-1 text-sm text-muted-foreground">No certificate matches ID "{verifyId}".</p>
+              <p className="mt-1 text-sm text-muted-foreground">No certificate matches ID &quot;{verifyId}&quot;.</p>
             </div>
           ) : (
             <div className="space-y-3">

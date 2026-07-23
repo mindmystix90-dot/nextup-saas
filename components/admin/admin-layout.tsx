@@ -22,7 +22,9 @@ import { AdminRoute } from '@/components/auth/admin-route';
 import { adminNav } from '@/lib/data/admin';
 import { getIcon } from '@/lib/icons';
 
-const GROUPS = ['Overview', 'Manage', 'Engage', 'Insights'] as const;
+import { AdminUniversalSearch } from '@/components/admin/admin-universal-search';
+
+const GROUPS = ['Overview', 'Manage', 'Monetization', 'Engage', 'Platform'] as const;
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -120,13 +122,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                 <Menu className="h-5 w-5" />
               </button>
 
-              <div className="relative hidden md:block w-72">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input
-                  placeholder="Search admin…"
-                  className="h-10 w-full rounded-xl border border-input bg-background pl-10 pr-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                />
-              </div>
+              <AdminUniversalSearch />
 
               <div className="ml-auto flex items-center gap-2 md:gap-3">
                 <button

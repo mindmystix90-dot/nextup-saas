@@ -25,7 +25,7 @@ export function TestimonialCard({ name, role, avatar, rating, review }: Testimon
           />
         ))}
       </div>
-      <p className="mt-4 flex-1 text-sm leading-relaxed text-foreground">"{review}"</p>
+      <p className="mt-4 flex-1 text-sm leading-relaxed text-foreground">&quot;{review}&quot;</p>
       <div className="mt-6 flex items-center gap-3 pt-4 border-t border-border">
         <Avatar>
           <AvatarImage src={avatar} alt={name} />

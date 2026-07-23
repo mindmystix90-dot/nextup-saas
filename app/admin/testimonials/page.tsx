@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { MessageSquare, Search, Plus, Pencil, Trash2, Star } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { MessageSquare, Search, Plus, Pencil, Trash2, Star, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,15 +23,26 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { AdminPageHeader, StatusBadge } from '@/components/admin/admin-page-header';
-import { adminTestimonials } from '@/lib/data/admin';
 import { toast } from 'sonner';
+
+interface TestimonialItem {
+  id: string;
+  name: string;
+  role: string;
+  review: string;
+  rating: number;
+  status: 'Published' | 'Pending' | 'Hidden';
+  avatar?: string;
+}
 
 export default function AdminTestimonialsPage() {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('all');
+  const [testimonials, setTestimonials] = useState<TestimonialItem[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const filtered = useMemo(() => {
-    return adminTestimonials.filter((t) => {
+    return testimonials.filter((t) => {
       const matchQuery =
         t.name.toLowerCase().includes(query.toLowerCase()) ||
         t.role.toLowerCase().includes(query.toLowerCase()) ||
@@ -39,7 +50,7 @@ export default function AdminTestimonialsPage() {
       const matchStatus = status === 'all' || t.status === status;
       return matchQuery && matchStatus;
     });
-  }, [query, status]);
+  }, [testimonials, query, status]);
 
   return (
     <div className="space-y-6">

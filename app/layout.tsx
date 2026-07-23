@@ -37,6 +37,9 @@ export const metadata: Metadata = {
   },
 };
 
+import { Suspense } from 'react';
+import { ReferralTracker } from '@/components/affiliate/referral-tracker';
+
 export default function RootLayout({
   children,
 }: {
@@ -46,6 +49,9 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${jakarta.variable}`}>
       <body className="font-sans">
         <AuthProvider>
+          <Suspense fallback={null}>
+            <ReferralTracker />
+          </Suspense>
           {children}
         </AuthProvider>
         <Toaster />

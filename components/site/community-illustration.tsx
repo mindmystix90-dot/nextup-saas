@@ -28,7 +28,7 @@ export function CommunityIllustration() {
           </span>
           <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
             <div className="flex -space-x-2">
-              {['AS', 'PV', 'AS', 'NG'].map((i) => (
+              {['AS', 'PV', 'RJ', 'NG'].map((i) => (
                 <Avatar key={i} className="h-7 w-7 border-2 border-white">
                   <AvatarFallback className="text-[10px] font-semibold bg-brand-gradient text-white">{i}</AvatarFallback>
                 </Avatar>

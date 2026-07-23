@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Check, Loader2, Sparkles, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,11 +10,18 @@ import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/site/navbar';
 import { Footer } from '@/components/site/footer';
 import { fetchActivePricingPlans } from '@/services/pricing.service';
+import { CheckoutModal } from '@/components/checkout/checkout-modal';
+import { useAuth } from '@/hooks/use-auth';
 import type { PricingPlan } from '@/types';
 
 export default function PricingPage() {
+  const { user } = useAuth();
+  const router = useRouter();
+
   const [plans, setPlans] = useState<PricingPlan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedPlan, setSelectedPlan] = useState<PricingPlan | null>(null);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -23,6 +31,15 @@ export default function PricingPage() {
       } catch { /* best-effort */ } finally { setLoading(false); }
     })();
   }, []);
+
+  const handleSelectPlan = (plan: PricingPlan) => {
+    if (!user) {
+      router.push(`/register?redirect=/pricing`);
+    } else {
+      setSelectedPlan(plan);
+      setIsCheckoutOpen(true);
+    }
+  };
 
   return (
     <>
@@ -38,7 +55,7 @@ export default function PricingPage() {
               Simple, transparent pricing
             </h1>
             <p className="mt-4 text-lg text-muted-foreground">
-              Choose the plan that fits your journey. Cancel anytime.
+              Choose the plan that fits your journey. Instant package access upon purchase.
             </p>
           </div>
 
@@ -71,11 +88,11 @@ export default function PricingPage() {
                       <span className="text-sm text-muted-foreground">{plan.period}</span>
                     </div>
                     <Button
-                      asChild
+                      onClick={() => handleSelectPlan(plan)}
                       className={`mt-6 w-full font-semibold ${plan.featured ? 'bg-brand-gradient' : ''}`}
                       variant={plan.featured ? 'default' : 'outline'}
                     >
-                      <Link href="/register">{plan.cta}</Link>
+                      {plan.cta}
                     </Button>
                     <ul className="mt-6 space-y-3">
                       {plan.features.map((f, i) => (
@@ -92,11 +109,28 @@ export default function PricingPage() {
           )}
 
           <p className="mt-8 text-center text-sm text-muted-foreground">
-            All plans include a 7-day money-back guarantee. No questions asked.
+            All plans include a 7-day money-back guarantee. Instant package access upon payment.
           </p>
         </div>
       </section>
+
+      {/* Checkout Modal */}
+      {selectedPlan && (
+        <CheckoutModal
+          isOpen={isCheckoutOpen}
+          onClose={() => setIsCheckoutOpen(false)}
+          item={{
+            id: selectedPlan.id,
+            name: `${selectedPlan.name} Membership`,
+            description: selectedPlan.description,
+            price: selectedPlan.price,
+            type: 'membership',
+          }}
+        />
+      )}
+
       <Footer />
     </>
   );
 }
+

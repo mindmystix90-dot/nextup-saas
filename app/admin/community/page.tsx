@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Users as UsersIcon, Search, Pin, Flag, Trash2, MessageSquare } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Users as UsersIcon, Search, Pin, Flag, Trash2, MessageSquare, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,23 +23,42 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { AdminPageHeader, StatusBadge } from '@/components/admin/admin-page-header';
-import { adminCommunityPosts } from '@/lib/data/admin';
+import { fetchDiscussions, deleteDiscussion } from '@/services/community.service';
+import type { Discussion } from '@/types';
 import { toast } from 'sonner';
 
 export default function AdminCommunityPage() {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('all');
+  const [posts, setPosts] = useState<Discussion[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  async function loadPosts() {
+    setLoading(true);
+    try {
+      const data = await fetchDiscussions();
+      setPosts(data);
+    } catch {
+      toast.error('Failed to load community discussions');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { loadPosts(); }, []);
 
   const filtered = useMemo(() => {
-    return adminCommunityPosts.filter((p) => {
+    return posts.filter((p) => {
+      const authorName = p.name || p.authorName || 'Anonymous';
+      const postTopic = p.topic || p.title || '';
+      const postCategory = p.category || '';
       const matchQuery =
-        p.author.toLowerCase().includes(query.toLowerCase()) ||
-        p.topic.toLowerCase().includes(query.toLowerCase()) ||
-        p.category.toLowerCase().includes(query.toLowerCase());
-      const matchStatus = status === 'all' || p.status === status;
-      return matchQuery && matchStatus;
+        authorName.toLowerCase().includes(query.toLowerCase()) ||
+        postTopic.toLowerCase().includes(query.toLowerCase()) ||
+        postCategory.toLowerCase().includes(query.toLowerCase());
+      return matchQuery;
     });
-  }, [query, status]);
+  }, [posts, query]);
 
   return (
     <div className="space-y-6">
@@ -52,19 +71,19 @@ export default function AdminCommunityPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="card-premium"><CardContent className="p-4">
           <p className="text-xs text-muted-foreground">Total posts</p>
-          <p className="font-display text-xl font-bold">{adminCommunityPosts.length}</p>
+          <p className="font-display text-xl font-bold">{posts.length}</p>
         </CardContent></Card>
         <Card className="card-premium"><CardContent className="p-4">
           <p className="text-xs text-muted-foreground">Active</p>
-          <p className="font-display text-xl font-bold text-success">{adminCommunityPosts.filter((p) => p.status === 'Active').length}</p>
+          <p className="font-display text-xl font-bold text-success">{posts.length}</p>
         </CardContent></Card>
         <Card className="card-premium"><CardContent className="p-4">
           <p className="text-xs text-muted-foreground">Flagged</p>
-          <p className="font-display text-xl font-bold text-destructive">{adminCommunityPosts.filter((p) => p.status === 'Flagged').length}</p>
+          <p className="font-display text-xl font-bold text-destructive">0</p>
         </CardContent></Card>
         <Card className="card-premium"><CardContent className="p-4">
           <p className="text-xs text-muted-foreground">Pinned</p>
-          <p className="font-display text-xl font-bold text-primary">{adminCommunityPosts.filter((p) => p.status === 'Pinned').length}</p>
+          <p className="font-display text-xl font-bold text-primary">0</p>
         </CardContent></Card>
       </div>
 
@@ -81,83 +100,74 @@ export default function AdminCommunityPage() {
                 onChange={(e) => setQuery(e.target.value)}
               />
             </div>
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger className="w-40"><SelectValue placeholder="Status" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All status</SelectItem>
-                <SelectItem value="Active">Active</SelectItem>
-                <SelectItem value="Pinned">Pinned</SelectItem>
-                <SelectItem value="Flagged">Flagged</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Author</TableHead>
-                <TableHead>Topic</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead className="text-right">Replies</TableHead>
-                <TableHead className="text-right">Likes</TableHead>
-                <TableHead className="text-right">Reports</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-9 w-9">
-                        <AvatarImage src={p.avatar} alt={p.author} />
-                        <AvatarFallback className="bg-brand-gradient text-white text-xs font-semibold">
-                          {p.author.split(' ').map((n) => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium text-foreground">{p.author}</p>
-                        <p className="text-xs text-muted-foreground">{p.time}</p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="max-w-sm">
-                    <p className="text-sm font-medium text-foreground line-clamp-1">{p.topic}</p>
-                    <p className="text-xs text-muted-foreground">{p.id}</p>
-                  </TableCell>
-                  <TableCell><Badge variant="outline">{p.category}</Badge></TableCell>
-                  <TableCell className="text-right">{p.replies}</TableCell>
-                  <TableCell className="text-right">{p.likes}</TableCell>
-                  <TableCell className="text-right">
-                    {p.reports > 0 ? <span className="text-destructive font-medium">{p.reports}</span> : '0'}
-                  </TableCell>
-                  <TableCell><StatusBadge status={p.status} /></TableCell>
-                  <TableCell className="text-right">
-                    <div className="inline-flex items-center gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.success(`Pinned ${p.id} (demo)`)}>
-                        <Pin className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-warning hover:text-warning" onClick={() => toast.info(`Flagged ${p.id} (demo)`)}>
-                        <Flag className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => toast.error(`Removed ${p.id} (demo)`)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filtered.length === 0 && (
+          {loading ? (
+            <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <MessageSquare className="mx-auto h-10 w-10 mb-3 opacity-40" />
+              <p className="text-sm">No community posts found in Firestore.</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                    No posts match your filters.
-                  </TableCell>
+                  <TableHead>Author</TableHead>
+                  <TableHead>Topic</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead className="text-right">Replies</TableHead>
+                  <TableHead className="text-right">Likes</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((p, idx) => {
+                  const authorName = p.name || p.authorName || 'Anonymous';
+                  const postTopic = p.topic || p.title || 'Untitled Post';
+                  return (
+                    <TableRow key={p.id || idx}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-9 w-9">
+                            <AvatarFallback className="bg-brand-gradient text-white text-xs font-semibold">
+                              {authorName.slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium text-foreground">{authorName}</p>
+                            <p className="text-xs text-muted-foreground">{p.timeAgo || p.time || 'Recently'}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="max-w-sm">
+                        <p className="text-sm font-medium text-foreground line-clamp-1">{postTopic}</p>
+                        <p className="text-xs text-muted-foreground">{p.id || 'N/A'}</p>
+                      </TableCell>
+                      <TableCell><Badge variant="outline">{p.category || 'General'}</Badge></TableCell>
+                      <TableCell className="text-right">{p.replies ?? p.repliesCount ?? 0}</TableCell>
+                      <TableCell className="text-right">{p.likes ?? p.likesCount ?? 0}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => {
+                          if (!p.id) return;
+                          try {
+                            await deleteDiscussion(p.id);
+                            toast.success('Deleted post');
+                            loadPosts();
+                          } catch {
+                            toast.error('Failed to delete post');
+                          }
+                        }}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>

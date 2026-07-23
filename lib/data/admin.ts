@@ -335,14 +335,25 @@ export const adminPermissions: {
 export const adminNav: { label: string; href: string; icon: string; group: string }[] = [
   { label: 'Dashboard', href: '/admin', icon: 'LayoutDashboard', group: 'Overview' },
   { label: 'Analytics', href: '/admin/analytics', icon: 'BarChart3', group: 'Overview' },
+
   { label: 'Users', href: '/admin/users', icon: 'Users', group: 'Manage' },
+  { label: 'Roles & Permissions', href: '/admin/roles', icon: 'ShieldCheck', group: 'Manage' },
   { label: 'Courses', href: '/admin/courses', icon: 'BookOpen', group: 'Manage' },
+  { label: 'Live Classes', href: '/admin/live-classes', icon: 'Video', group: 'Manage' },
   { label: 'Certificates', href: '/admin/certificates', icon: 'Award', group: 'Manage' },
-  { label: 'Pricing', href: '/admin/pricing', icon: 'CreditCard', group: 'Manage' },
-  { label: 'Community', href: '/admin/community', icon: 'Users', group: 'Engage' },
-  { label: 'Affiliate', href: '/admin/affiliate', icon: 'Network', group: 'Engage' },
-  { label: 'Payments', href: '/admin/wallet', icon: 'Wallet', group: 'Engage' },
-  { label: 'Website CMS', href: '/admin/content', icon: 'FileText', group: 'Insights' },
-  { label: 'Testimonials', href: '/admin/testimonials', icon: 'MessageSquare', group: 'Insights' },
-  { label: 'Settings', href: '/admin/settings', icon: 'Settings', group: 'Insights' },
+
+  { label: 'Packages (Pricing)', href: '/admin/pricing', icon: 'CreditCard', group: 'Monetization' },
+  { label: 'Orders & Approvals', href: '/admin/orders', icon: 'ShoppingBag', group: 'Monetization' },
+  { label: 'Sales CRM', href: '/admin/crm', icon: 'TrendingUp', group: 'Monetization' },
+  { label: 'Coupons', href: '/admin/coupons', icon: 'Tag', group: 'Monetization' },
+  { label: 'Payments & Payouts', href: '/admin/wallet', icon: 'Wallet', group: 'Monetization' },
+  { label: 'Affiliates & Partners', href: '/admin/affiliate', icon: 'Network', group: 'Monetization' },
+
+  { label: 'Community', href: '/admin/community', icon: 'MessageSquare', group: 'Engage' },
+  { label: 'Support Tickets', href: '/admin/support', icon: 'LifeBuoy', group: 'Engage' },
+  { label: 'Notification Center', href: '/admin/notifications', icon: 'Bell', group: 'Engage' },
+
+  { label: 'Website CMS', href: '/admin/content', icon: 'FileText', group: 'Platform' },
+  { label: 'Testimonials', href: '/admin/testimonials', icon: 'Star', group: 'Platform' },
+  { label: 'Settings', href: '/admin/settings', icon: 'Settings', group: 'Platform' },
 ];

@@ -6,7 +6,18 @@ import { firebaseConfig, isFirebaseConfigured } from './config';
 
 export const firebaseReady = isFirebaseConfigured;
 
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+const fallbackConfig = {
+  apiKey: 'demo-api-key',
+  authDomain: 'demo-app.firebaseapp.com',
+  projectId: 'demo-project',
+  storageBucket: 'demo-app.appspot.com',
+  messagingSenderId: '1234567890',
+  appId: '1:1234567890:web:1234567890',
+};
+
+const app = getApps().length
+  ? getApp()
+  : initializeApp(isFirebaseConfigured ? firebaseConfig : fallbackConfig);
 export const firebaseApp = app;
 
 let _auth: Auth | null = null;

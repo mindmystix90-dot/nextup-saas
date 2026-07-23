@@ -12,7 +12,9 @@ import { DashboardLayout } from '@/components/dashboard/dashboard-layout';
 import { useAuth } from '@/hooks/use-auth';
 import { fetchPublishedCourses, fetchUserCourseAccess, type Course } from '@/services/courses.service';
 import { fetchWallet, fetchTransactions, formatINR } from '@/services/wallet.service';
-import type { WalletData, WalletTransaction } from '@/types';
+import { fetchUserCertificates } from '@/services/certificates.service';
+import { fetchUserOrders } from '@/services/commerce.service';
+import type { WalletData, WalletTransaction, Certificate, Order } from '@/types';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -22,22 +24,28 @@ export default function DashboardPage() {
   const [publishedCourses, setPublishedCourses] = useState<Course[]>([]);
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
+  const [userCertificates, setUserCertificates] = useState<Certificate[]>([]);
+  const [userOrders, setUserOrders] = useState<Order[]>([]);
 
   useEffect(() => {
     if (!user?.uid) return;
     (async () => {
       setLoading(true);
       try {
-        const [courses, accessIds, w, txns] = await Promise.all([
+        const [courses, accessIds, w, txns, certs, ords] = await Promise.all([
           fetchPublishedCourses(),
           fetchUserCourseAccess(user.uid),
           fetchWallet(user.uid),
           fetchTransactions(user.uid),
+          fetchUserCertificates(user.uid),
+          fetchUserOrders(user.uid),
         ]);
         setPublishedCourses(courses);
         setEnrolledCourses(courses.filter((c) => accessIds.includes(c.id)));
         setWallet(w);
         setTransactions(txns);
+        setUserCertificates(certs);
+        setUserOrders(ords);
       } catch {
         // best-effort
       } finally {
@@ -45,6 +53,7 @@ export default function DashboardPage() {
       }
     })();
   }, [user?.uid]);
+
 
   const membership = user?.membership || 'starter';
   const membershipLabel = membership.charAt(0).toUpperCase() + membership.slice(1);
@@ -93,9 +102,9 @@ export default function DashboardPage() {
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard icon={BookOpen} label="Enrolled Courses" value={String(enrolledCourses.length)} color="text-primary" />
-        <StatCard icon={Award} label="Certificates" value="0" color="text-amber-500" />
+        <StatCard icon={Award} label="Certificates" value={String(userCertificates.length)} color="text-amber-500" />
         <StatCard icon={Wallet} label="Wallet Balance" value={`₹${formatINR(wallet?.balance ?? 0)}`} color="text-success" />
-        <StatCard icon={TrendingUp} label="Lifetime Earnings" value={`₹${formatINR(wallet?.lifetimeEarnings ?? 0)}`} color="text-violet-500" />
+        <StatCard icon={TrendingUp} label="Orders & Purchases" value={String(userOrders.length)} color="text-violet-500" />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
@@ -222,16 +231,30 @@ export default function DashboardPage() {
               <CardTitle className="text-lg flex items-center gap-2">
                 <Award className="h-5 w-5 text-amber-500" /> Certificates
               </CardTitle>
-              <Badge variant="secondary">0 earned</Badge>
+              <Badge variant="secondary">{userCertificates.length} earned</Badge>
             </CardHeader>
             <CardContent>
-              <EmptyState
-                icon={Trophy}
-                title="No certificates yet"
-                description="Complete a course to earn your first certificate."
-                actionLabel="Browse Courses"
-                actionHref="/courses"
-              />
+              {userCertificates.length === 0 ? (
+                <EmptyState
+                  icon={Trophy}
+                  title="No certificates yet"
+                  description="Complete 100% of any course to automatically earn your certificate."
+                  actionLabel="My Learning"
+                  actionHref="/dashboard/learning"
+                />
+              ) : (
+                <div className="space-y-3">
+                  {userCertificates.slice(0, 3).map((cert) => (
+                    <div key={cert.id} className="p-3 rounded-xl bg-secondary/40 border border-border flex items-center justify-between text-xs">
+                      <div>
+                        <p className="font-semibold text-foreground">{cert.courseName}</p>
+                        <p className="text-muted-foreground">Issued: {cert.issueDate}</p>
+                      </div>
+                      <Badge className="bg-amber-500/10 text-amber-600 border-transparent font-bold">Verified</Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 

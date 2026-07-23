@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
-import { ArrowRight, MessageSquare, Video, Sparkles, TrendingUp, Users, HelpCircle, Search, ThumbsUp, Reply } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ArrowRight, MessageSquare, Video, Sparkles, TrendingUp, Users, HelpCircle, Search, ThumbsUp, Reply, Loader2 } from 'lucide-react';
 import { Navbar } from '@/components/site/navbar';
 import { Footer } from '@/components/site/footer';
 import { Reveal } from '@/components/site/reveal';
@@ -14,28 +14,62 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { communityFeatures } from '@/lib/data/site';
-import {
-  communityDiscussions,
-  communityLiveClasses,
-  trendingTopics,
-  mentorPosts,
-  studentQuestions,
-} from '@/lib/data/community';
-import { announcements } from '@/lib/data/dashboard';
+import { fetchDiscussions, fetchMentorPosts, fetchStudentQuestions } from '@/services/community.service';
+import { fetchLiveClasses } from '@/services/live-classes.service';
+import type { Discussion, MentorPost, StudentQuestion, LiveClassSession } from '@/types';
 import { getIcon } from '@/lib/icons';
+import { toast } from 'sonner';
 
 const TABS = ['Discussions', 'Mentor Posts', 'Student Questions'] as const;
 type Tab = (typeof TABS)[number];
 
+const trendingTopics = ['Next.js', 'Firebase', 'React', 'Fullstack', 'Design Systems'];
+const announcements = [
+  {
+    title: 'Community Guidelines Updated',
+    text: 'Please review our updated community guidelines for respectful discussions.',
+    tag: 'Announcement',
+    tagColor: 'bg-primary/10 text-primary',
+  },
+];
+
 export default function CommunityPage() {
   const [tab, setTab] = useState<Tab>('Discussions');
   const [query, setQuery] = useState('');
+  const [discussions, setDiscussions] = useState<Discussion[]>([]);
+  const [mentorPostsList, setMentorPostsList] = useState<MentorPost[]>([]);
+  const [questionsList, setQuestionsList] = useState<StudentQuestion[]>([]);
+  const [liveClassesList, setLiveClassesList] = useState<LiveClassSession[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredDiscussions = communityDiscussions.filter(
-    (d) =>
-      d.topic.toLowerCase().includes(query.toLowerCase()) ||
-      d.name.toLowerCase().includes(query.toLowerCase())
-  );
+  useEffect(() => {
+    async function loadData() {
+      setLoading(true);
+      try {
+        const [d, m, q, lc] = await Promise.all([
+          fetchDiscussions(),
+          fetchMentorPosts(),
+          fetchStudentQuestions(),
+          fetchLiveClasses(),
+        ]);
+        setDiscussions(d);
+        setMentorPostsList(m);
+        setQuestionsList(q);
+        setLiveClassesList(lc);
+      } catch {
+        toast.error('Failed to load community content');
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
+
+  const filteredDiscussions = discussions.filter((d) => {
+    const title = d.title || d.topic || '';
+    const author = d.authorName || d.name || '';
+    return title.toLowerCase().includes(query.toLowerCase()) || author.toLowerCase().includes(query.toLowerCase());
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -155,92 +189,101 @@ export default function CommunityPage() {
                   ))}
                 </div>
 
-                {tab === 'Discussions' && (
-                  <div className="space-y-3">
-                    {filteredDiscussions.map((d) => (
-                      <div key={d.topic} className="flex items-start gap-4 rounded-2xl border border-border p-4 hover:bg-secondary/40 transition-colors">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={d.avatar} alt={d.name} />
-                          <AvatarFallback className="bg-brand-gradient text-white text-xs font-semibold">
-                            {d.name.split(' ').map((n) => n[0]).join('')}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-sm font-semibold">{d.name}</p>
-                            <span className="text-xs text-muted-foreground">· {d.role}</span>
-                            {d.trending && (
-                              <Badge className="bg-primary/10 text-primary border-transparent text-[10px]">
-                                <TrendingUp className="mr-1 h-3 w-3" /> Trending
-                              </Badge>
-                            )}
+                {loading ? (
+                  <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+                ) : tab === 'Discussions' ? (
+                  filteredDiscussions.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground text-sm">No community discussions found. Be the first to start a conversation!</div>
+                  ) : (
+                    <div className="space-y-3">
+                      {filteredDiscussions.map((d, idx) => {
+                        const authorName = d.authorName || d.name || 'Anonymous';
+                        const title = d.title || d.topic || 'Untitled Discussion';
+                        const replies = d.repliesCount ?? d.replies ?? 0;
+                        const likes = d.likesCount ?? d.likes ?? 0;
+                        return (
+                          <div key={d.id || idx} className="flex items-start gap-4 rounded-2xl border border-border p-4 hover:bg-secondary/40 transition-colors">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={d.authorAvatar || d.avatar} alt={authorName} />
+                              <AvatarFallback className="bg-brand-gradient text-white text-xs font-semibold">
+                                {authorName.split(' ').map((n) => n[0]).join('')}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="text-sm font-semibold">{authorName}</p>
+                                <span className="text-xs text-muted-foreground">· {d.category || 'General'}</span>
+                                {d.isPinned && (
+                                  <Badge className="bg-primary/10 text-primary border-transparent text-[10px]">
+                                    <TrendingUp className="mr-1 h-3 w-3" /> Pinned
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="mt-1 text-sm font-medium text-foreground">{title}</p>
+                              {d.content && <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{d.content}</p>}
+                              <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
+                                <span className="flex items-center gap-1"><Reply className="h-3.5 w-3.5" /> {replies}</span>
+                                <span className="flex items-center gap-1"><ThumbsUp className="h-3.5 w-3.5" /> {likes}</span>
+                              </div>
+                            </div>
                           </div>
-                          <p className="mt-1 text-sm text-foreground">{d.topic}</p>
-                          <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1"><Reply className="h-3.5 w-3.5" /> {d.replies}</span>
-                            <span className="flex items-center gap-1"><ThumbsUp className="h-3.5 w-3.5" /> {d.likes}</span>
-                            <span>{d.time}</span>
+                        );
+                      })}
+                    </div>
+                  )
+                ) : tab === 'Mentor Posts' ? (
+                  mentorPostsList.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground text-sm">No mentor posts available.</div>
+                  ) : (
+                    <div className="space-y-3">
+                      {mentorPostsList.map((p) => (
+                        <div key={p.id} className="rounded-2xl border border-border p-4 hover:bg-secondary/40 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={p.authorAvatar} alt={p.authorName} />
+                              <AvatarFallback className="bg-brand-gradient text-white text-xs font-semibold">
+                                {p.authorName.split(' ').map((n) => n[0]).join('')}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="text-sm font-semibold">{p.authorName}</p>
+                              <p className="text-xs text-muted-foreground">Mentor</p>
+                            </div>
+                            <Badge variant="secondary" className="ml-auto">Mentor</Badge>
                           </div>
+                          <p className="mt-3 font-semibold text-foreground">{p.title}</p>
+                          <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{p.content}</p>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {tab === 'Mentor Posts' && (
-                  <div className="space-y-3">
-                    {mentorPosts.map((p) => (
-                      <div key={p.title} className="rounded-2xl border border-border p-4 hover:bg-secondary/40 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={p.avatar} alt={p.name} />
-                            <AvatarFallback className="bg-brand-gradient text-white text-xs font-semibold">
-                              {p.name.split(' ').map((n) => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="text-sm font-semibold">{p.name}</p>
-                            <p className="text-xs text-muted-foreground">{p.role} · {p.time}</p>
+                      ))}
+                    </div>
+                  )
+                ) : (
+                  questionsList.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground text-sm">No unanswered questions.</div>
+                  ) : (
+                    <div className="space-y-3">
+                      {questionsList.map((q) => (
+                        <div key={q.id} className="rounded-2xl border border-border p-4 hover:bg-secondary/40 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-9 w-9">
+                              <AvatarImage src={q.authorAvatar} alt={q.authorName} />
+                              <AvatarFallback className="bg-brand-gradient text-white text-xs font-semibold">
+                                {q.authorName.split(' ').map((n) => n[0]).join('')}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="text-sm font-semibold">{q.authorName}</p>
+                              <p className="text-xs text-muted-foreground">{q.courseTitle}</p>
+                            </div>
+                            <Badge variant="outline" className="ml-auto flex items-center gap-1 text-[10px]">
+                              <HelpCircle className="h-3 w-3" /> Question
+                            </Badge>
                           </div>
-                          <Badge variant="secondary" className="ml-auto">Mentor</Badge>
+                          <p className="mt-3 text-sm text-foreground">{q.question}</p>
                         </div>
-                        <p className="mt-3 font-semibold text-foreground">{p.title}</p>
-                        <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{p.excerpt}</p>
-                        <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1"><ThumbsUp className="h-3.5 w-3.5" /> {p.likes}</span>
-                          <span className="flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5" /> {p.comments}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {tab === 'Student Questions' && (
-                  <div className="space-y-3">
-                    {studentQuestions.map((q) => (
-                      <div key={q.question} className="rounded-2xl border border-border p-4 hover:bg-secondary/40 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-9 w-9">
-                            <AvatarImage src={q.avatar} alt={q.name} />
-                            <AvatarFallback className="bg-brand-gradient text-white text-xs font-semibold">
-                              {q.name.split(' ').map((n) => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="text-sm font-semibold">{q.name}</p>
-                            <p className="text-xs text-muted-foreground">in {q.course} · {q.time}</p>
-                          </div>
-                          <Badge variant="outline" className="ml-auto flex items-center gap-1 text-[10px]">
-                            <HelpCircle className="h-3 w-3" /> Question
-                          </Badge>
-                        </div>
-                        <p className="mt-3 text-sm text-foreground">{q.question}</p>
-                        <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1"><Reply className="h-3.5 w-3.5" /> {q.replies} answers</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )
                 )}
               </CardContent>
             </Card>
@@ -256,23 +299,20 @@ export default function CommunityPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {communityLiveClasses.map((c) => (
-                  <div key={c.title} className="rounded-2xl border border-border p-4">
-                    <p className="text-sm font-semibold">{c.title}</p>
-                    <div className="mt-2 flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={c.hostAvatar} alt={c.host} />
-                        <AvatarFallback className="bg-brand-gradient text-white text-[10px] font-semibold">
-                          {c.host.split(' ').map((n) => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <p className="text-xs text-muted-foreground">{c.host}</p>
+                {loading ? (
+                  <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+                ) : liveClassesList.length === 0 ? (
+                  <div className="text-center py-6 text-xs text-muted-foreground">No upcoming live classes scheduled.</div>
+                ) : (
+                  liveClassesList.map((c) => (
+                    <div key={c.id} className="rounded-2xl border border-border p-4">
+                      <p className="text-sm font-semibold">{c.title}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Instructor: {c.instructor}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{c.scheduledAt} · {c.durationMinutes} mins</p>
+                      <Button size="sm" variant="outline" className="mt-3 w-full font-semibold" onClick={() => toast.success(`Reminder set for ${c.title}`)}>Set reminder</Button>
                     </div>
-                    <p className="mt-2 text-xs text-muted-foreground">{c.date} · {c.time}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">{c.watching}</p>
-                    <Button size="sm" variant="outline" className="mt-3 w-full font-semibold">Set reminder</Button>
-                  </div>
-                ))}
+                  ))
+                )}
               </CardContent>
             </Card>
 
