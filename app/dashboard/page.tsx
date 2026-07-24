@@ -11,9 +11,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DashboardLayout } from '@/components/dashboard/dashboard-layout';
 import { useAuth } from '@/hooks/use-auth';
 import { fetchPublishedCourses, fetchUserCourseAccess, type Course } from '@/services/courses.service';
-import { fetchWallet, fetchTransactions, formatINR } from '@/services/wallet.service';
+import { fetchWallet, fetchTransactions, subscribeWallet, subscribeTransactions, formatINR } from '@/services/wallet.service';
 import { fetchUserCertificates } from '@/services/certificates.service';
-import { fetchUserOrders } from '@/services/commerce.service';
+import { fetchUserOrders, subscribeUserOrders } from '@/services/commerce.service';
 import type { WalletData, WalletTransaction, Certificate, Order } from '@/types';
 
 export default function DashboardPage() {
@@ -29,29 +29,35 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!user?.uid) return;
+
+    // Load static courses & certificates
     (async () => {
-      setLoading(true);
       try {
-        const [courses, accessIds, w, txns, certs, ords] = await Promise.all([
+        const [courses, accessIds, certs] = await Promise.all([
           fetchPublishedCourses(),
           fetchUserCourseAccess(user.uid),
-          fetchWallet(user.uid),
-          fetchTransactions(user.uid),
           fetchUserCertificates(user.uid),
-          fetchUserOrders(user.uid),
         ]);
         setPublishedCourses(courses);
         setEnrolledCourses(courses.filter((c) => accessIds.includes(c.id)));
-        setWallet(w);
-        setTransactions(txns);
         setUserCertificates(certs);
-        setUserOrders(ords);
       } catch {
         // best-effort
       } finally {
         setLoading(false);
       }
     })();
+
+    // Realtime subscriptions for Wallet, Transactions, Orders
+    const unsubWallet = subscribeWallet(user.uid, (w) => setWallet(w));
+    const unsubTxns = subscribeTransactions(user.uid, (txns) => setTransactions(txns));
+    const unsubOrders = subscribeUserOrders(user.uid, (ords) => setUserOrders(ords));
+
+    return () => {
+      unsubWallet();
+      unsubTxns();
+      unsubOrders();
+    };
   }, [user?.uid]);
 
 

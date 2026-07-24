@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AdminPageHeader, StatusBadge } from '@/components/admin/admin-page-header';
 import { toast } from 'sonner';
 import { fetchSalesPartners, createSalesPartner, updateSalesPartner } from '@/services/partners.service';
-import { fetchAllAffiliateStats, adminSetAffiliateEnabled } from '@/services/affiliate.service';
+import { fetchAllAffiliateStats, subscribeAllAffiliateStats, adminSetAffiliateEnabled } from '@/services/affiliate.service';
 import type { SalesPartner, AffiliateStats } from '@/types';
 
 export default function AdminAffiliatePage() {
@@ -67,7 +67,12 @@ export default function AdminAffiliatePage() {
 
   useEffect(() => {
     loadPartners();
-    loadAffiliates();
+    setLoadingAffiliates(true);
+    const unsubAffiliates = subscribeAllAffiliateStats((data) => {
+      setAffiliates(data);
+      setLoadingAffiliates(false);
+    });
+    return () => unsubAffiliates();
   }, []);
 
   function openCreatePartner() {

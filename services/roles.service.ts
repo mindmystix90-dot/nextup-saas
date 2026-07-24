@@ -1,5 +1,5 @@
 import {
-  collection, doc, getDocs, setDoc, updateDoc, serverTimestamp,
+  collection, doc, getDocs, setDoc, updateDoc, serverTimestamp, onSnapshot,
 } from 'firebase/firestore';
 import { getFirestoreDb, firebaseReady } from '@/lib/firebase';
 import type { RolePermission } from '@/types';
@@ -86,6 +86,25 @@ export async function fetchRolePermissions(): Promise<RolePermission[]> {
   } catch {
     return DEFAULT_ROLES;
   }
+}
+
+export function subscribeRolePermissions(callback: (roles: RolePermission[]) => void): () => void {
+  if (!firebaseReady) {
+    callback(DEFAULT_ROLES);
+    return () => {};
+  }
+
+  const db = getFirestoreDb();
+  return onSnapshot(collection(db, ROLES_COLLECTION), (snap) => {
+    if (snap.empty) {
+      callback(DEFAULT_ROLES);
+    } else {
+      callback(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<RolePermission, 'id'>) })));
+    }
+  }, (err) => {
+    console.warn('subscribeRolePermissions error:', err);
+    callback(DEFAULT_ROLES);
+  });
 }
 
 export async function updateRolePermissions(id: string, permissions: string[]): Promise<void> {

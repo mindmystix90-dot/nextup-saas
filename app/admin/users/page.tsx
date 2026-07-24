@@ -38,18 +38,14 @@ export default function AdminUsersPage() {
   const [deleteTarget, setDeleteTarget] = useState<FirestoreProfile | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const load = useCallback(async () => {
-    try {
-      const data = await authService.adminListUsers();
+  useEffect(() => {
+    setLoading(true);
+    const unsub = authService.adminSubscribeUsers((data) => {
       setUsers(data);
-    } catch {
-      toast.error('Failed to load users');
-    } finally {
       setLoading(false);
-    }
+    });
+    return () => unsub();
   }, []);
-
-  useEffect(() => { load(); }, [load]);
 
   const filtered = useMemo(() => {
     return users.filter((u) => {
@@ -73,7 +69,6 @@ export default function AdminUsersPage() {
     try {
       await authService.adminSuspendUser(u.uid, !isSuspended);
       toast.success(`${isSuspended ? 'Reactivated' : 'Suspended'} ${u.name || u.email}`);
-      await load();
     } catch {
       toast.error('Failed to update user status');
     }
@@ -96,7 +91,6 @@ export default function AdminUsersPage() {
       await authService.adminDeleteUser(deleteTarget.uid);
       toast.success(`${deleteTarget.name || deleteTarget.email} deleted from database`);
       setDeleteTarget(null);
-      await load();
     } catch {
       toast.error('Failed to delete user');
     } finally {
@@ -269,7 +263,7 @@ export default function AdminUsersPage() {
             <UserControlCenter
               user={editUser}
               onClose={() => setEditUser(null)}
-              onSaved={load}
+              onSaved={() => setEditUser(null)}
             />
           )}
         </DialogContent>

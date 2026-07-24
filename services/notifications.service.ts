@@ -1,5 +1,5 @@
 import {
-  collection, deleteDoc, doc, getDocs, setDoc, updateDoc, serverTimestamp,
+  collection, deleteDoc, doc, getDocs, setDoc, updateDoc, serverTimestamp, onSnapshot, query, where,
 } from 'firebase/firestore';
 import { getFirestoreDb, firebaseReady } from '@/lib/firebase';
 import type { NotificationItem } from '@/types';
@@ -15,6 +15,45 @@ export async function fetchNotifications(): Promise<NotificationItem[]> {
   } catch {
     return [];
   }
+}
+
+export function subscribeNotifications(callback: (notifications: NotificationItem[]) => void): () => void {
+  if (!firebaseReady) {
+    callback([]);
+    return () => {};
+  }
+
+  const db = getFirestoreDb();
+  return onSnapshot(collection(db, NOTIFICATIONS_COLLECTION), (snap) => {
+    const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<NotificationItem, 'id'>) }));
+    list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+    callback(list);
+  }, (err) => {
+    console.warn('subscribeNotifications error:', err);
+    callback([]);
+  });
+}
+
+export function subscribeUserNotifications(
+  uid: string,
+  callback: (notifications: NotificationItem[]) => void
+): () => void {
+  if (!firebaseReady) {
+    callback([]);
+    return () => {};
+  }
+
+  const db = getFirestoreDb();
+  return onSnapshot(collection(db, NOTIFICATIONS_COLLECTION), (snap) => {
+    const list = snap.docs
+      .map((d) => ({ id: d.id, ...(d.data() as Omit<NotificationItem, 'id'>) }))
+      .filter((n) => !n.uid || n.uid === uid || n.targetRole === 'student' || n.targetRole === 'all');
+    list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+    callback(list);
+  }, (err) => {
+    console.warn('subscribeUserNotifications error:', err);
+    callback([]);
+  });
 }
 
 export async function createNotification(input: Omit<NotificationItem, 'id' | 'createdAt' | 'readCount'>): Promise<NotificationItem> {

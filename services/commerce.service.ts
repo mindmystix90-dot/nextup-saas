@@ -9,10 +9,12 @@ import {
   updateDoc,
   orderBy,
   serverTimestamp,
+  onSnapshot,
 } from 'firebase/firestore';
 import { getFirestoreDb, firebaseReady } from '@/lib/firebase';
 import { generateOrderId, generatePaymentId, generateInvoiceId } from '@/lib/id-generator';
 import { recordAffiliatePurchase } from '@/services/affiliate.service';
+import { processPackageSaleCommission } from '@/services/commission.service';
 import { logAdminAction } from '@/services/audit.service';
 import { sendEmailNotification } from '@/services/email.service';
 import type { Order, Payment, Invoice, Membership, ActivityLog, NotificationItem } from '@/types';
@@ -258,9 +260,21 @@ export async function approveManualPayment(orderId: string, adminUid: string = '
   const affiliateIdentifier = referredByUid || referredByCode || order.couponCode;
 
   if (affiliateIdentifier) {
-    const res = await recordAffiliatePurchase(affiliateIdentifier, order.totalAmount, order.id);
-    if (res) {
-      console.log(`[Affiliate Attribution] Credited ₹${res.commissionAmount} to affiliate ${res.referrerUid}`);
+    if (order.packageId) {
+      await processPackageSaleCommission({
+        referralCode: referredByCode || affiliateIdentifier,
+        packageId: order.packageId,
+        orderId: order.id,
+        buyerUid: order.uid,
+        buyerName: order.userName,
+        buyerEmail: order.userEmail,
+        priceOverride: order.totalAmount,
+      });
+    } else {
+      const res = await recordAffiliatePurchase(affiliateIdentifier, order.totalAmount, order.id);
+      if (res) {
+        console.log(`[Affiliate Attribution] Credited ₹${res.commissionAmount} to affiliate ${res.referrerUid}`);
+      }
     }
   }
 
@@ -371,4 +385,76 @@ export async function fetchAllOrders(): Promise<Order[]> {
   } catch {
     return [];
   }
+}
+
+// ===== REALTIME SUBSCRIPTIONS =====
+
+export function subscribeUserOrders(uid: string, callback: (orders: Order[]) => void): () => void {
+  if (!firebaseReady) {
+    callback([]);
+    return () => {};
+  }
+
+  const db = getFirestoreDb();
+  const q = query(collection(db, ORDERS_COLLECTION), where('uid', '==', uid));
+  return onSnapshot(q, (snap) => {
+    const orders = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Order, 'id'>) }));
+    orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    callback(orders);
+  }, (err) => {
+    console.warn('subscribeUserOrders error:', err);
+    callback([]);
+  });
+}
+
+export function subscribeAllOrders(callback: (orders: Order[]) => void): () => void {
+  if (!firebaseReady) {
+    callback([]);
+    return () => {};
+  }
+
+  const db = getFirestoreDb();
+  return onSnapshot(collection(db, ORDERS_COLLECTION), (snap) => {
+    const orders = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Order, 'id'>) }));
+    orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    callback(orders);
+  }, (err) => {
+    console.warn('subscribeAllOrders error:', err);
+    callback([]);
+  });
+}
+
+export function subscribeUserPayments(uid: string, callback: (payments: Payment[]) => void): () => void {
+  if (!firebaseReady) {
+    callback([]);
+    return () => {};
+  }
+
+  const db = getFirestoreDb();
+  const q = query(collection(db, PAYMENTS_COLLECTION), where('uid', '==', uid));
+  return onSnapshot(q, (snap) => {
+    const payments = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Payment, 'id'>) }));
+    callback(payments);
+  }, (err) => {
+    console.warn('subscribeUserPayments error:', err);
+    callback([]);
+  });
+}
+
+export function subscribeUserInvoices(uid: string, callback: (invoices: Invoice[]) => void): () => void {
+  if (!firebaseReady) {
+    callback([]);
+    return () => {};
+  }
+
+  const db = getFirestoreDb();
+  const q = query(collection(db, INVOICES_COLLECTION), where('uid', '==', uid));
+  return onSnapshot(q, (snap) => {
+    const invoices = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Invoice, 'id'>) }));
+    invoices.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    callback(invoices);
+  }, (err) => {
+    console.warn('subscribeUserInvoices error:', err);
+    callback([]);
+  });
 }

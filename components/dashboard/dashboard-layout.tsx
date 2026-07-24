@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   Sun,
   Moon,
+  CheckSquare,
 } from 'lucide-react';
 import { cn, homeFor } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -42,6 +43,7 @@ import { MobileBottomNav } from '@/components/dashboard/mobile-bottom-nav';
 
 const NAV = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { label: 'Microtasks', href: '/dashboard/microtasks', icon: CheckSquare },
   { label: 'Learning', href: '/dashboard/learning', icon: BookOpen },
   { label: 'Certificates', href: '/dashboard/certificates', icon: Award },
   { label: 'Community', href: '/dashboard/community', icon: Users },

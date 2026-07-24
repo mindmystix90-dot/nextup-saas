@@ -10,7 +10,7 @@ import {
   updatePassword,
   type User as FirebaseUser,
 } from 'firebase/auth';
-import { doc, getDoc, onSnapshot, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, serverTimestamp, setDoc, updateDoc, collection, query, orderBy, limit } from 'firebase/firestore';
 import type { AuthResult, FirestoreProfile, Membership, MembershipStatus, Role, SessionUser } from '@/types';
 import { firebaseReady, getFirebaseAuth, getFirestoreDb, googleProvider } from '@/lib/firebase';
 
@@ -58,6 +58,7 @@ export async function createUserDocument(
 ): Promise<FirestoreProfile> {
   const ref = doc(db(), USERS_COLLECTION, firebaseUser.uid);
   const existing = await getDoc(ref);
+  const isNewUser = !existing.exists();
   const now = new Date().toISOString();
 
   const profile: FirestoreProfile = {
@@ -74,6 +75,30 @@ export async function createUserDocument(
   };
 
   await setDoc(ref, profile, { merge: true });
+
+  if (isNewUser) {
+    try {
+      let refCode = '';
+      if (typeof window !== 'undefined') {
+        refCode = localStorage.getItem('nextup_ref_code') || '';
+        if (!refCode) {
+          const match = document.cookie.match(/nextup_ref_code=([^;]+)/);
+          if (match) refCode = decodeURIComponent(match[1]);
+        }
+      }
+      if (refCode) {
+        const { recordAffiliateRegistration } = await import('@/services/affiliate.service');
+        await recordAffiliateRegistration(refCode, {
+          uid: firebaseUser.uid,
+          name: profile.name,
+          email: profile.email,
+        });
+      }
+    } catch (err) {
+      console.warn('Failed to record referral during user creation:', err);
+    }
+  }
+
   return profile;
 }
 
@@ -274,6 +299,24 @@ export const authService = {
     const { collection, getDocs, query, orderBy, limit } = await import('firebase/firestore');
     const snap = await getDocs(query(collection(db(), USERS_COLLECTION), orderBy('createdAt', 'desc'), limit(200)));
     return snap.docs.map((d) => d.data() as FirestoreProfile);
+  },
+
+  adminSubscribeUsers(callback: (users: FirestoreProfile[]) => void): () => void {
+    if (!firebaseReady) {
+      callback([]);
+      return () => {};
+    }
+    const q = query(collection(db(), USERS_COLLECTION), orderBy('createdAt', 'desc'), limit(200));
+    return onSnapshot(
+      q,
+      (snap) => {
+        callback(snap.docs.map((d) => d.data() as FirestoreProfile));
+      },
+      (err) => {
+        console.warn('Users listener error:', err);
+        callback([]);
+      }
+    );
   },
 
   async adminUpdateUser(uid: string, updates: Partial<FirestoreProfile>): Promise<AuthResult> {

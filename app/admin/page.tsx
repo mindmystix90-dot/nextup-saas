@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { Skeleton } from '@/components/ui/skeletons';
-import { fetchDashboardStats, fetchRecentSignups, fetchRecentPayments, type DashboardStats, type RecentSignup, type PaymentRow } from '@/services/admin.service';
+import { subscribeDashboardStats, subscribeRecentSignups, subscribeRecentPayments, type DashboardStats, type RecentSignup, type PaymentRow } from '@/services/admin.service';
 import { membershipLabel } from '@/lib/utils';
 
 function formatINR(n: number): string {
@@ -22,21 +22,22 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const [s, r, p] = await Promise.all([fetchDashboardStats(), fetchRecentSignups(5), fetchRecentPayments(5)]);
-        if (cancelled) return;
-        setStats(s);
-        setSignups(r);
-        setPayments(p);
-      } catch {
-        // keep nulls — will show zeros
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
+    const unsubStats = subscribeDashboardStats((s) => {
+      setStats(s);
+      setLoading(false);
+    });
+    const unsubSignups = subscribeRecentSignups(5, (r) => {
+      setSignups(r);
+    });
+    const unsubPayments = subscribeRecentPayments(5, (p) => {
+      setPayments(p);
+    });
+
+    return () => {
+      unsubStats();
+      unsubSignups();
+      unsubPayments();
+    };
   }, []);
 
   const statCards = [

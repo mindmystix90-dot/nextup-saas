@@ -127,15 +127,54 @@ export interface LiveClass {
 
 // ===== Wallet & Payments =====
 
-export type TransactionType = 'credit' | 'debit' | 'withdrawal' | 'referral' | 'referral_commission' | 'bonus' | 'purchase' | 'refund';
+export type TransactionType =
+  | 'credit'
+  | 'debit'
+  | 'withdrawal'
+  | 'referral'
+  | 'referral_commission'
+  | 'purchase'
+  | 'microtask'
+  | 'daily_reward'
+  | 'admin_credit'
+  | 'bonus'
+  | 'cashback'
+  | 'penalty'
+  | 'refund';
+
 export type TransactionStatus = 'completed' | 'pending' | 'failed';
 export type KycStatus = 'pending' | 'verified' | 'rejected';
-export type WithdrawalMethod = 'upi' | 'bank';
-export type WithdrawalStatus = 'pending' | 'approved' | 'rejected' | 'paid';
+export type WithdrawalMethod = string;
+export type WithdrawalStatus = 'pending' | 'approved' | 'rejected' | 'paid' | 'failed';
+
+export interface PaymentMethodField {
+  key: string;
+  label: string;
+  placeholder?: string;
+  required: boolean;
+  type?: 'text' | 'email' | 'number';
+}
+
+export interface PaymentMethodConfig {
+  id: string;
+  name: string;
+  enabled: boolean;
+  minimumWithdraw: number;
+  maximumWithdraw: number;
+  withdrawFee: number;
+  withdrawFeeType: 'fixed' | 'percentage';
+  processingTime: string;
+  instructions: string;
+  requiredFields: PaymentMethodField[];
+  displayOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 export interface WalletData {
   uid: string;
   balance: number;
+  pendingBalance?: number;
   lifetimeEarnings: number;
   pendingWithdrawals: number;
   completedWithdrawals: number;
@@ -173,16 +212,72 @@ export interface Withdrawal {
   userName: string;
   userEmail: string;
   amount: number;
+  fee?: number;
+  netAmount?: number;
   method: WithdrawalMethod;
+  methodName?: string;
   status: WithdrawalStatus;
   requestedAt: string;
   processedAt?: string;
+  paidAt?: string;
   adminNote?: string;
+  paymentDetails?: Record<string, string>;
   upiId?: string;
   bankName?: string;
   accountNumber?: string;
   ifsc?: string;
   accountHolder?: string;
+  // Payment Proof Fields
+  transactionId?: string;
+  referenceNumber?: string;
+  paymentNotes?: string;
+  paymentProofUrl?: string;
+  paymentProofUploadedAt?: string;
+}
+
+export interface GlobalWithdrawalSettings {
+  withdrawalsEnabled: boolean;
+  maintenanceMode: boolean;
+  globalMinimumWithdrawal: number;
+  globalMaximumWithdrawal: number;
+  dailyWithdrawalLimit: number;
+  weeklyWithdrawalLimit: number;
+  maximumPendingWithdrawals: number;
+  withdrawalCooldownHours: number;
+  requireKYC: boolean;
+  autoApprove: boolean;
+  allowWeekendWithdrawals: boolean;
+  allowHolidayWithdrawals: boolean;
+  adminMessage: string;
+  updatedAt?: string;
+}
+
+export interface PlatformFinance {
+  currentPlatformBalance: number;
+  pendingWithdrawalAmount: number;
+  reservedBalance: number;
+  totalPaidOut: number;
+  totalWithdrawalFees: number;
+  platformProfit: number;
+  affiliateProfit: number;
+  microtaskProfit: number;
+  monthlyProfit: number;
+  dailyProfit: number;
+  updatedAt?: string;
+}
+
+export interface AdminAuditLog {
+  id: string;
+  adminUid: string;
+  adminName: string;
+  adminEmail?: string;
+  action: string;
+  targetCollection: string;
+  targetDocument: string;
+  oldValues?: Record<string, any>;
+  newValues?: Record<string, any>;
+  timestamp: string;
+  ipAddress?: string;
 }
 
 // ===== Payments =====
@@ -328,9 +423,10 @@ export interface SupportTicket {
 
 export interface NotificationItem {
   id: string;
+  uid?: string;
   title: string;
   message: string;
-  targetRole: 'all' | 'student' | 'affiliate' | 'instructor' | 'admin';
+  targetRole?: 'all' | 'student' | 'affiliate' | 'instructor' | 'admin';
   type: 'info' | 'success' | 'warning' | 'alert';
   createdAt: string;
   sentBy?: string;
@@ -471,7 +567,153 @@ export interface ActivityLog {
   metadata?: Record<string, unknown>;
 }
 
-// ===== Roles & Permissions =====
+export interface SystemSettings {
+  walletEnabled: boolean;
+  rewards: {
+    referralSignupBonus: number;
+    affiliatePurchasePercent: number;
+    dailyReward: number;
+  };
+  withdrawals: {
+    minimumWithdraw: number;
+    maximumWithdraw: number;
+    withdrawalFee: number;
+    withdrawalFeeType: 'fixed' | 'percentage';
+    autoApprove: boolean;
+  };
+  affiliate: {
+    enabled: boolean;
+    cookieDurationDays: number;
+    attribution: 'first_click' | 'last_click';
+    commissionPercent: number;
+  };
+  microtasks: {
+    enabled: boolean;
+    minimumWithdraw: number;
+    profitMarginPercent: number;
+    defaultPendingDays: number;
+  };
+}
+
+
+export interface MembershipPackage {
+  id: string;
+  name: string;
+  slug: string;
+  price: number;
+  description: string;
+  features: string[];
+  affiliateCommissionPercent: number;
+  affiliateCommissionFlat?: number;
+  bonusReward: number;
+  displayOrder: number;
+  salesBadge?: string;
+  status: 'active' | 'disabled';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PackageAffiliateOrder {
+  id: string;
+  affiliateUid: string;
+  affiliateCode: string;
+  packageId: string;
+  packageName: string;
+  packagePrice: number;
+  commissionRate: number;
+  commissionAmount: number;
+  bonusAmount: number;
+  orderId: string;
+  buyerUid: string;
+  buyerName: string;
+  buyerEmail: string;
+  purchaseTime: string;
+  status: 'completed' | 'pending' | 'refunded';
+}
+
+export interface MicrotaskProvider {
+  id: string;
+  name: string;
+  slug: string;
+  apiKey: string;
+  apiSecret?: string;
+  webhookSecret: string;
+  enabled: boolean;
+  syncIntervalMinutes: number;
+  profitMarginPercent: number;
+  status: 'active' | 'inactive' | 'error';
+  lastSyncAt?: string;
+  lastError?: string;
+  totalSyncedTasks?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type MicrotaskCategory = 'social' | 'survey' | 'app_download' | 'signup' | 'review' | 'video' | 'other';
+export type MicrotaskDifficulty = 'easy' | 'medium' | 'hard';
+export type ProofType = 'text' | 'url' | 'screenshot';
+
+export interface Microtask {
+  id: string;
+  providerId: string;
+  providerName: string;
+  externalTaskId: string;
+  title: string;
+  description: string;
+  instructions: string;
+  requirements: string[];
+  category: MicrotaskCategory;
+  difficulty: MicrotaskDifficulty;
+  estimatedMinutes: number;
+  originalReward: number;
+  reward: number;
+  platformFee: number;
+  proofTypes: ProofType[];
+  externalUrl?: string;
+  maxSubmissions: number;
+  completedCount: number;
+  status: 'active' | 'paused' | 'completed' | 'expired';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type MicrotaskSubmissionStatus = 'submitted' | 'pending_provider' | 'approved' | 'rejected';
+
+export interface MicrotaskSubmission {
+  id: string;
+  taskId: string;
+  taskTitle: string;
+  providerId: string;
+  providerName: string;
+  uid: string;
+  userName: string;
+  userEmail: string;
+  proofText?: string;
+  proofUrl?: string;
+  proofScreenshots?: string[];
+  status: MicrotaskSubmissionStatus;
+  rejectionReason?: string;
+  reward: number;
+  platformFee: number;
+  submittedAt: string;
+  validatedAt?: string;
+  processedAt?: string;
+  transactionId?: string;
+}
+
+export interface MicrotaskAnalytics {
+  totalTasks: number;
+  totalSubmissions: number;
+  completedSubmissions: number;
+  rejectedSubmissions: number;
+  pendingSubmissions: number;
+  approvalRatePercent: number;
+  totalUserPayout: number;
+  totalPlatformProfit: number;
+  totalProviderVolume: number;
+  topWorkers: Array<{ uid: string; name: string; completed: number; totalEarned: number }>;
+  dailyEarnings: Array<{ date: string; earnings: number; profit: number; tasksCompleted: number }>;
+}
 
 export interface RolePermission {
   id: string;
@@ -479,8 +721,9 @@ export interface RolePermission {
   displayName: string;
   description: string;
   permissions: string[];
-  userCount?: number;
-  updatedAt?: string;
+  userCount: number;
+  updatedAt: string;
 }
+
 
 

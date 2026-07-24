@@ -347,6 +347,8 @@ export const adminNav: { label: string; href: string; icon: string; group: strin
   { label: 'Sales CRM', href: '/admin/crm', icon: 'TrendingUp', group: 'Monetization' },
   { label: 'Coupons', href: '/admin/coupons', icon: 'Tag', group: 'Monetization' },
   { label: 'Payments & Payouts', href: '/admin/wallet', icon: 'Wallet', group: 'Monetization' },
+  { label: 'Payment Methods', href: '/admin/wallet/payment-methods', icon: 'Sliders', group: 'Monetization' },
+  { label: 'Microtasks & Offers', href: '/admin/microtasks', icon: 'CheckSquare', group: 'Monetization' },
   { label: 'Affiliates & Partners', href: '/admin/affiliate', icon: 'Network', group: 'Monetization' },
 
   { label: 'Community', href: '/admin/community', icon: 'MessageSquare', group: 'Engage' },
