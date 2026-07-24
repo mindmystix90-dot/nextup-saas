@@ -186,6 +186,7 @@ export async function recordWalletTransaction(params: {
   label: string;
   amount: number; // positive for additions, negative for deductions/withdrawals
   method?: string;
+  source?: string;
   referenceId?: string;
   status?: 'completed' | 'pending' | 'failed';
 }): Promise<WalletTransaction> {
@@ -232,8 +233,12 @@ export async function recordWalletTransaction(params: {
     amount: params.amount,
     status,
     method: params.method || '',
+    source: params.source || params.method || params.type,
     referenceId: params.referenceId || '',
     date: new Date().toISOString().split('T')[0],
+    beforeBalance: currentWallet.balance,
+    afterBalance: Math.max(0, newBalance),
+    timestamp: new Date().toISOString(),
   };
 
   await setDoc(txnDoc, { ...txn, createdAt: serverTimestamp() });

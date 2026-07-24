@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, use, Suspense } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import {
   ArrowLeft,
   ExternalLink,
@@ -29,18 +29,13 @@ import { fetchTaskById, subscribeTask, submitTaskProof } from '@/services/microt
 import { formatINR } from '@/services/wallet.service';
 import type { Microtask } from '@/types';
 
-function MicrotaskDetailsContent({ params }: { params: Promise<{ id: string }> | { id: string } }) {
-  let resolvedId = '';
-  try {
-    const resolvedParams =
-      params && typeof (params as any)?.then === 'function'
-        ? use(params as Promise<{ id: string }>)
-        : (params as { id: string });
-    resolvedId = resolvedParams?.id || '';
-    console.log('[MicrotaskDetailsPage] Route parameter unwrapped:', params, 'Resolved Task ID:', resolvedId);
-  } catch (err) {
-    console.error('[MicrotaskDetailsPage] Error unwrapping params:', err);
-  }
+export default function MicrotaskDetailsPage({ params }: { params: { id: string } }) {
+  const routeParams = useParams();
+  const paramId = params?.id;
+  const navId = routeParams?.id;
+  const resolvedId = paramId || (Array.isArray(navId) ? navId[0] : navId) || '';
+
+  console.log('[MicrotaskDetailsPage] Resolved Task ID:', resolvedId);
 
   const router = useRouter();
   const { user } = useAuth();
@@ -93,11 +88,11 @@ function MicrotaskDetailsContent({ params }: { params: Promise<{ id: string }> |
           const singleTask = await fetchTaskById(resolvedId);
           setTask(singleTask);
           if (!singleTask) {
-            setLoadError('Task not found.');
+            setLoadError('Task not found');
           }
         } catch (fetchErr: any) {
           console.error('[MicrotaskDetailsPage] Error in fallback fetchTaskById:', fetchErr);
-          setLoadError('Unable to load task');
+          setLoadError('Task not found');
         } finally {
           setLoading(false);
         }
@@ -214,31 +209,14 @@ function MicrotaskDetailsContent({ params }: { params: Promise<{ id: string }> |
     );
   }
 
-  if (loadError) {
-    return (
-      <DashboardLayout>
-        <div className="py-16 text-center space-y-4 max-w-md mx-auto">
-          <AlertCircle className="mx-auto h-12 w-12 text-rose-500" />
-          <h2 className="text-xl font-bold text-foreground">Unable to load task</h2>
-          <p className="text-sm text-muted-foreground">{loadError}</p>
-          <Button asChild variant="outline" className="mt-4">
-            <Link href="/dashboard/microtasks">
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Task Marketplace
-            </Link>
-          </Button>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  if (!task) {
+  if (loadError || !task) {
     return (
       <DashboardLayout>
         <div className="py-16 text-center space-y-4 max-w-md mx-auto">
           <AlertCircle className="mx-auto h-12 w-12 text-amber-500" />
-          <h2 className="text-xl font-bold text-foreground">Microtask Not Found</h2>
+          <h2 className="text-xl font-bold text-foreground">Task not found</h2>
           <p className="text-sm text-muted-foreground">
-            This microtask may have expired, reached maximum submissions, or been removed.
+            {loadError || 'This microtask may have expired, reached maximum submissions, or been removed.'}
           </p>
           <Button asChild variant="outline" className="mt-4">
             <Link href="/dashboard/microtasks">
@@ -468,18 +446,3 @@ function MicrotaskDetailsContent({ params }: { params: Promise<{ id: string }> |
   );
 }
 
-export default function MicrotaskDetailsPage({ params }: { params: Promise<{ id: string }> | { id: string } }) {
-  return (
-    <Suspense
-      fallback={
-        <DashboardLayout>
-          <div className="flex items-center justify-center py-24">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          </div>
-        </DashboardLayout>
-      }
-    >
-      <MicrotaskDetailsContent params={params} />
-    </Suspense>
-  );
-}

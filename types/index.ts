@@ -191,6 +191,10 @@ export interface WalletTransaction {
   method?: string;
   referenceId?: string;
   date: string;
+  source?: string;
+  beforeBalance?: number;
+  afterBalance?: number;
+  timestamp?: string;
 }
 
 export interface KycInfo {

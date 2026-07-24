@@ -391,10 +391,12 @@ export async function fetchTaskById(id: string): Promise<Microtask | null> {
   }
   if (!firebaseReady) {
     console.warn('[fetchTaskById] Firebase unavailable, checking SAMPLE_TASKS for ID:', id);
-    const sample = SAMPLE_TASKS.find((t) => t.id === id);
-    const result = sample ? sanitizeTaskData(sample.id, sample) : null;
-    console.log('[fetchTaskById] Sample fallback response:', result);
-    return result;
+    try {
+      const sample = SAMPLE_TASKS.find((t) => t.id === id);
+      return sample ? sanitizeTaskData(sample.id, sample) : null;
+    } catch {
+      return null;
+    }
   }
   try {
     const db = getFirestoreDb();
@@ -411,15 +413,15 @@ export async function fetchTaskById(id: string): Promise<Microtask | null> {
     }
     console.warn('[fetchTaskById] Firestore document does not exist for ID:', id, '-> checking SAMPLE_TASKS');
     const sample = SAMPLE_TASKS.find((t) => t.id === id);
-    const result = sample ? sanitizeTaskData(sample.id, sample) : null;
-    console.log('[fetchTaskById] Sample fallback response:', result);
-    return result;
+    return sample ? sanitizeTaskData(sample.id, sample) : null;
   } catch (err: any) {
     console.error('[fetchTaskById] Original Firebase error fetching task by ID:', id, err);
-    const sample = SAMPLE_TASKS.find((t) => t.id === id);
-    const result = sample ? sanitizeTaskData(sample.id, sample) : null;
-    console.log('[fetchTaskById] Fallback response after Firebase error:', result);
-    return result;
+    try {
+      const sample = SAMPLE_TASKS.find((t) => t.id === id);
+      return sample ? sanitizeTaskData(sample.id, sample) : null;
+    } catch {
+      return null;
+    }
   }
 }
 
@@ -432,8 +434,12 @@ export function subscribeTask(id: string, callback: (task: Microtask | null) => 
   }
   if (!firebaseReady) {
     console.warn('[subscribeTask] Firebase unavailable, returning sample task for ID:', id);
-    const sample = SAMPLE_TASKS.find((t) => t.id === id);
-    callback(sample ? sanitizeTaskData(sample.id, sample) : null);
+    try {
+      const sample = SAMPLE_TASKS.find((t) => t.id === id);
+      callback(sample ? sanitizeTaskData(sample.id, sample) : null);
+    } catch {
+      callback(null);
+    }
     return () => {};
   }
   try {
@@ -443,30 +449,43 @@ export function subscribeTask(id: string, callback: (task: Microtask | null) => 
     return onSnapshot(
       ref,
       (snap) => {
-        if (snap.exists()) {
-          const data = snap.data();
-          console.log('[subscribeTask] Firestore response doc snapshot:', snap.id, data);
-          const sanitized = sanitizeTaskData(snap.id, data);
-          console.log('[subscribeTask] Provider lookup:', sanitized.providerName, '(', sanitized.providerId, ')');
-          console.log('[subscribeTask] Reward lookup: reward =', sanitized.reward, 'original =', sanitized.originalReward);
-          console.log('[subscribeTask] Instructions lookup:', sanitized.instructions);
-          callback(sanitized);
-        } else {
-          console.warn('[subscribeTask] Firestore doc does not exist for ID:', id, '-> checking SAMPLE_TASKS');
-          const sample = SAMPLE_TASKS.find((t) => t.id === id);
-          callback(sample ? sanitizeTaskData(sample.id, sample) : null);
+        try {
+          if (snap.exists()) {
+            const data = snap.data();
+            console.log('[subscribeTask] Firestore response doc snapshot:', snap.id, data);
+            const sanitized = sanitizeTaskData(snap.id, data);
+            console.log('[subscribeTask] Provider lookup:', sanitized.providerName, '(', sanitized.providerId, ')');
+            console.log('[subscribeTask] Reward lookup: reward =', sanitized.reward, 'original =', sanitized.originalReward);
+            console.log('[subscribeTask] Instructions lookup:', sanitized.instructions);
+            callback(sanitized);
+          } else {
+            console.warn('[subscribeTask] Firestore doc does not exist for ID:', id, '-> checking SAMPLE_TASKS');
+            const sample = SAMPLE_TASKS.find((t) => t.id === id);
+            callback(sample ? sanitizeTaskData(sample.id, sample) : null);
+          }
+        } catch (innerErr) {
+          console.error('[subscribeTask] Error processing snapshot data:', innerErr);
+          callback(null);
         }
       },
       (err) => {
         console.error('[subscribeTask] Original Firebase error in snapshot listener for ID:', id, err);
-        const sample = SAMPLE_TASKS.find((t) => t.id === id);
-        callback(sample ? sanitizeTaskData(sample.id, sample) : null);
+        try {
+          const sample = SAMPLE_TASKS.find((t) => t.id === id);
+          callback(sample ? sanitizeTaskData(sample.id, sample) : null);
+        } catch {
+          callback(null);
+        }
       }
     );
   } catch (err: any) {
     console.error('[subscribeTask] Setup error for ID:', id, err);
-    const sample = SAMPLE_TASKS.find((t) => t.id === id);
-    callback(sample ? sanitizeTaskData(sample.id, sample) : null);
+    try {
+      const sample = SAMPLE_TASKS.find((t) => t.id === id);
+      callback(sample ? sanitizeTaskData(sample.id, sample) : null);
+    } catch {
+      callback(null);
+    }
     return () => {};
   }
 }
