@@ -132,10 +132,10 @@ export async function recordAffiliateClick(referralCode: string): Promise<void> 
     const target = await findOrCreateAffiliateByCode(referralCode);
     if (target) {
       const currentClicks = target.data.clicks || 0;
-      await updateDoc(target.ref, {
+      await setDoc(target.ref, {
         clicks: currentClicks + 1,
         updatedAt: new Date().toISOString(),
-      });
+      }, { merge: true });
     }
   } catch (e) {
     console.warn('Failed to record affiliate click:', e);
@@ -163,11 +163,11 @@ export async function recordAffiliateRegistration(
 
       const currentRegs = affData.registrations || 0;
 
-      // 1. Update affiliate stats
-      await updateDoc(affRef, {
+      // 1. Update affiliate stats safely with setDoc merge
+      await setDoc(affRef, {
         registrations: currentRegs + 1,
         updatedAt: new Date().toISOString(),
-      });
+      }, { merge: true });
 
       // 2. Write referral record
       const refDoc = doc(collection(db, REFERRALS_COLLECTION));
@@ -254,17 +254,17 @@ export async function recordAffiliatePurchase(
       }
     }
 
-    const data = affSnap.data() as AffiliateStats;
+    const data = (affSnap.exists() ? affSnap.data() : {}) as Partial<AffiliateStats>;
     const rate = data.commissionRate || settings.affiliate.commissionPercent || settings.rewards.affiliatePurchasePercent || 10;
     const commissionAmount = Math.round((saleAmount * rate) / 100);
 
-    // Update Affiliate Stats
-    await updateDoc(affRef, {
+    // Update Affiliate Stats safely with setDoc merge
+    await setDoc(affRef, {
       sales: (data.sales || 0) + 1,
       pendingCommission: (data.pendingCommission || 0) + commissionAmount,
       availableBalance: (data.availableBalance || 0) + commissionAmount,
       updatedAt: new Date().toISOString(),
-    });
+    }, { merge: true });
 
     if (commissionAmount > 0) {
       await recordWalletTransaction({

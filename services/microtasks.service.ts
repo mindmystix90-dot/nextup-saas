@@ -303,13 +303,17 @@ export async function fetchTasks(): Promise<Microtask[]> {
       for (const t of SAMPLE_TASKS) {
         await setDoc(doc(db, TASKS_COLLECTION, t.id), {
           ...t,
+          status: 'active',
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
       }
       return SAMPLE_TASKS;
     }
-    return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Microtask, 'id'>) }));
+    return snap.docs.map((d) => {
+      const data = d.data() as Omit<Microtask, 'id'>;
+      return { id: d.id, ...data, status: data.status || 'active' };
+    });
   } catch {
     return SAMPLE_TASKS;
   }
@@ -321,7 +325,8 @@ export async function fetchTaskById(id: string): Promise<Microtask | null> {
     const db = getFirestoreDb();
     const snap = await getDoc(doc(db, TASKS_COLLECTION, id));
     if (snap.exists()) {
-      return { id: snap.id, ...(snap.data() as Omit<Microtask, 'id'>) };
+      const data = snap.data() as Omit<Microtask, 'id'>;
+      return { id: snap.id, ...data, status: data.status || 'active' };
     }
     return SAMPLE_TASKS.find((t) => t.id === id) || null;
   } catch {
@@ -350,13 +355,7 @@ export async function saveTask(task: Partial<Microtask> & { id: string; title: s
     updatedAt: now,
   };
 
-  const snap = await getDoc(ref);
-  if (!snap.exists()) {
-    dataToSave.createdAt = now;
-    await setDoc(ref, dataToSave);
-  } else {
-    await updateDoc(ref, dataToSave);
-  }
+  await setDoc(ref, dataToSave, { merge: true });
 }
 
 export async function syncTasksForProvider(providerId: string): Promise<{ syncedCount: number }> {
@@ -368,15 +367,46 @@ export async function syncTasksForProvider(providerId: string): Promise<{ synced
 
     const provider = pSnap.data() as MicrotaskProvider;
 
-    // Simulate provider task import & margin application
-    const syncedTasksCount = Math.floor(Math.random() * 5) + 3;
+    // Generate new active tasks for this provider
+    const syncedTasksCount = Math.floor(Math.random() * 3) + 2;
+    const now = new Date().toISOString();
 
-    await updateDoc(doc(db, PROVIDERS_COLLECTION, providerId), {
-      lastSyncAt: new Date().toISOString(),
+    for (let i = 1; i <= syncedTasksCount; i++) {
+      const taskId = `${providerId}-task-${Date.now()}-${i}`;
+      const reward = Math.floor(Math.random() * 40) + 15;
+      const platformFee = Math.round(reward * 0.2);
+      const newTask: Microtask = {
+        id: taskId,
+        providerId: provider.id,
+        providerName: provider.name,
+        externalTaskId: `EXT-${Math.floor(1000 + Math.random() * 9000)}`,
+        title: `Complete ${provider.name} Sponsored Offer #${Math.floor(100 + Math.random() * 900)}`,
+        description: `Perform simple tasks and submit proof to earn rewards directly via ${provider.name}.`,
+        instructions: `1. Click the offer link to navigate to ${provider.name}.\n2. Follow the instructions to complete the required action.\n3. Take a screenshot or copy confirmation code as proof.`,
+        requirements: ['Valid account', 'Unique completion code or screenshot proof'],
+        category: 'social',
+        difficulty: 'easy',
+        estimatedMinutes: Math.floor(Math.random() * 5) + 3,
+        originalReward: reward + platformFee,
+        reward,
+        platformFee,
+        proofTypes: ['text', 'screenshot'],
+        externalUrl: `https://${provider.slug}.com`,
+        maxSubmissions: 300,
+        completedCount: 0,
+        status: 'active',
+        createdAt: now,
+        updatedAt: now,
+      };
+      await setDoc(doc(db, TASKS_COLLECTION, taskId), { ...newTask, createdAt: serverTimestamp() });
+    }
+
+    await setDoc(doc(db, PROVIDERS_COLLECTION, providerId), {
+      lastSyncAt: now,
       totalSyncedTasks: (provider.totalSyncedTasks || 0) + syncedTasksCount,
       status: 'active',
       lastError: '',
-    });
+    }, { merge: true });
 
     return { syncedCount: syncedTasksCount };
   } catch (err) {

@@ -62,27 +62,38 @@ export function subscribeWallet(uid: string, callback: (wallet: WalletData) => v
 export async function fetchTransactions(uid: string): Promise<WalletTransaction[]> {
   if (!firebaseReady) return [];
   const db = getFirestoreDb();
-  const snap = await getDocs(
-    query(collection(db, TRANSACTIONS_COLLECTION), where('uid', '==', uid), orderBy('createdAt', 'desc'))
-  );
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<WalletTransaction, 'id'>) }));
+  try {
+    const snap = await getDocs(
+      query(collection(db, TRANSACTIONS_COLLECTION), where('uid', '==', uid))
+    );
+    const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<WalletTransaction, 'id'>) }));
+    return list.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+  } catch {
+    return [];
+  }
 }
 
 export function subscribeTransactions(uid: string, callback: (txns: WalletTransaction[]) => void) {
   if (!firebaseReady) { callback([]); return () => {}; }
   const db = getFirestoreDb();
-  const q = query(collection(db, TRANSACTIONS_COLLECTION), where('uid', '==', uid), orderBy('createdAt', 'desc'));
+  const q = query(collection(db, TRANSACTIONS_COLLECTION), where('uid', '==', uid));
   return onSnapshot(q, (snap) => {
-    callback(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<WalletTransaction, 'id'>) })));
+    const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<WalletTransaction, 'id'>) }));
+    list.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+    callback(list);
+  }, (err) => {
+    console.warn('subscribeTransactions error:', err);
+    callback([]);
   });
 }
 
 export function subscribeAllTransactions(callback: (txns: WalletTransaction[]) => void): () => void {
   if (!firebaseReady) { callback([]); return () => {}; }
   const db = getFirestoreDb();
-  const q = query(collection(db, TRANSACTIONS_COLLECTION), orderBy('createdAt', 'desc'));
-  return onSnapshot(q, (snap) => {
-    callback(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<WalletTransaction, 'id'>) })));
+  return onSnapshot(collection(db, TRANSACTIONS_COLLECTION), (snap) => {
+    const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<WalletTransaction, 'id'>) }));
+    list.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+    callback(list);
   }, (err) => {
     console.warn('subscribeAllTransactions error:', err);
     callback([]);
@@ -92,8 +103,13 @@ export function subscribeAllTransactions(callback: (txns: WalletTransaction[]) =
 export async function fetchAllTransactions(): Promise<WalletTransaction[]> {
   if (!firebaseReady) return [];
   const db = getFirestoreDb();
-  const snap = await getDocs(query(collection(db, TRANSACTIONS_COLLECTION), orderBy('createdAt', 'desc')));
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<WalletTransaction, 'id'>) }));
+  try {
+    const snap = await getDocs(collection(db, TRANSACTIONS_COLLECTION));
+    const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<WalletTransaction, 'id'>) }));
+    return list.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+  } catch {
+    return [];
+  }
 }
 
 export async function fetchWithdrawals(uid: string): Promise<Withdrawal[]> {
@@ -101,25 +117,29 @@ export async function fetchWithdrawals(uid: string): Promise<Withdrawal[]> {
   const db = getFirestoreDb();
   try {
     const snapRequests = await getDocs(
-      query(collection(db, WITHDRAWAL_REQUESTS_COLLECTION), where('uid', '==', uid), orderBy('requestedAt', 'desc'))
+      query(collection(db, WITHDRAWAL_REQUESTS_COLLECTION), where('uid', '==', uid))
     );
     if (!snapRequests.empty) {
-      return snapRequests.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Withdrawal, 'id'>) }));
+      const list = snapRequests.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Withdrawal, 'id'>) }));
+      return list.sort((a, b) => new Date(b.requestedAt || 0).getTime() - new Date(a.requestedAt || 0).getTime());
     }
   } catch { /* best-effort fallback */ }
 
   const snap = await getDocs(
-    query(collection(db, WITHDRAWALS_COLLECTION), where('uid', '==', uid), orderBy('requestedAt', 'desc'))
+    query(collection(db, WITHDRAWALS_COLLECTION), where('uid', '==', uid))
   );
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Withdrawal, 'id'>) }));
+  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Withdrawal, 'id'>) }));
+  return list.sort((a, b) => new Date(b.requestedAt || 0).getTime() - new Date(a.requestedAt || 0).getTime());
 }
 
 export function subscribeWithdrawals(uid: string, callback: (withdrawals: Withdrawal[]) => void): () => void {
   if (!firebaseReady) { callback([]); return () => {}; }
   const db = getFirestoreDb();
-  const q = query(collection(db, WITHDRAWAL_REQUESTS_COLLECTION), where('uid', '==', uid), orderBy('requestedAt', 'desc'));
+  const q = query(collection(db, WITHDRAWAL_REQUESTS_COLLECTION), where('uid', '==', uid));
   return onSnapshot(q, (snap) => {
-    callback(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Withdrawal, 'id'>) })));
+    const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Withdrawal, 'id'>) }));
+    list.sort((a, b) => new Date(b.requestedAt || 0).getTime() - new Date(a.requestedAt || 0).getTime());
+    callback(list);
   }, (err) => {
     console.warn('subscribeWithdrawals error:', err);
     callback([]);
@@ -131,23 +151,26 @@ export async function fetchAllWithdrawals(): Promise<Withdrawal[]> {
   const db = getFirestoreDb();
   try {
     const snapRequests = await getDocs(
-      query(collection(db, WITHDRAWAL_REQUESTS_COLLECTION), orderBy('requestedAt', 'desc'))
+      collection(db, WITHDRAWAL_REQUESTS_COLLECTION)
     );
     if (!snapRequests.empty) {
-      return snapRequests.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Withdrawal, 'id'>) }));
+      const list = snapRequests.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Withdrawal, 'id'>) }));
+      return list.sort((a, b) => new Date(b.requestedAt || 0).getTime() - new Date(a.requestedAt || 0).getTime());
     }
   } catch { /* best-effort fallback */ }
 
-  const snap = await getDocs(query(collection(db, WITHDRAWALS_COLLECTION), orderBy('requestedAt', 'desc')));
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Withdrawal, 'id'>) }));
+  const snap = await getDocs(collection(db, WITHDRAWALS_COLLECTION));
+  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Withdrawal, 'id'>) }));
+  return list.sort((a, b) => new Date(b.requestedAt || 0).getTime() - new Date(a.requestedAt || 0).getTime());
 }
 
 export function subscribeAllWithdrawals(callback: (withdrawals: Withdrawal[]) => void): () => void {
   if (!firebaseReady) { callback([]); return () => {}; }
   const db = getFirestoreDb();
-  const q = query(collection(db, WITHDRAWAL_REQUESTS_COLLECTION), orderBy('requestedAt', 'desc'));
-  return onSnapshot(q, (snap) => {
-    callback(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Withdrawal, 'id'>) })));
+  return onSnapshot(collection(db, WITHDRAWAL_REQUESTS_COLLECTION), (snap) => {
+    const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Withdrawal, 'id'>) }));
+    list.sort((a, b) => new Date(b.requestedAt || 0).getTime() - new Date(a.requestedAt || 0).getTime());
+    callback(list);
   }, (err) => {
     console.warn('subscribeAllWithdrawals error:', err);
     callback([]);
@@ -179,19 +202,23 @@ export async function recordWalletTransaction(params: {
   const isEarning = params.amount > 0 && ['referral', 'referral_commission', 'purchase', 'microtask', 'daily_reward', 'admin_credit', 'bonus', 'cashback', 'credit'].includes(params.type);
   const newLifetime = isEarning ? currentWallet.lifetimeEarnings + params.amount : currentWallet.lifetimeEarnings;
 
-  // 1. Update wallet balance
-  await updateDoc(doc(db, WALLET_COLLECTION, params.uid), {
+  // 1. Update/Set wallet balance safely with merge
+  await setDoc(doc(db, WALLET_COLLECTION, params.uid), {
+    uid: params.uid,
     balance: Math.max(0, newBalance),
+    pendingBalance: currentWallet.pendingBalance || 0,
     lifetimeEarnings: newLifetime,
+    pendingWithdrawals: currentWallet.pendingWithdrawals || 0,
+    completedWithdrawals: currentWallet.completedWithdrawals || 0,
     updatedAt: serverTimestamp(),
-  });
+  }, { merge: true });
 
   // 2. Also update affiliates collection availableBalance for consistency if it exists
   try {
     const affRef = doc(db, 'affiliates', params.uid);
     const affSnap = await getDoc(affRef);
     if (affSnap.exists()) {
-      await updateDoc(affRef, { availableBalance: Math.max(0, newBalance), updatedAt: new Date().toISOString() });
+      await setDoc(affRef, { availableBalance: Math.max(0, newBalance), updatedAt: new Date().toISOString() }, { merge: true });
     }
   } catch { /* best-effort */ }
 
